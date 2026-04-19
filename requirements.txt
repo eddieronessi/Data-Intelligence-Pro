@@ -1,0 +1,11 @@
+Flask==3.0.0
+pandas
+numpy
+SQLAlchemy
+plotly
+scikit-learn
+reportlab
+psutil
+pandasai
+langchain-groq
+gunicorn

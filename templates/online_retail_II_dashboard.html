@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Online Retail II — Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#1c1c1e;color:#f0ede8;}
+  .dash{background:#1c1c1e;min-height:100vh;padding:20px;font-family:'Syne',sans-serif;}
+
+  /* HEADER */
+  .header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:16px;}
+  .header h1{font-size:20px;font-weight:700;letter-spacing:-0.3px;color:#f0ede8;}
+  .header .period{font-family:'DM Mono',monospace;font-size:11px;color:#888;background:rgba(255,255,255,0.06);padding:4px 10px;border-radius:20px;}
+
+  /* FILTER BAR */
+  .filter-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:#252527;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:12px 16px;margin-bottom:20px;}
+  .filter-group{display:flex;flex-direction:column;gap:4px;}
+  .filter-group label{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:#666;font-family:'DM Mono',monospace;}
+  .filter-group select, .filter-group input[type=range]{
+    background:#1c1c1e;border:1px solid rgba(255,255,255,0.12);color:#f0ede8;
+    font-family:'Syne',sans-serif;font-size:12px;padding:5px 10px;border-radius:8px;
+    cursor:pointer;outline:none;transition:border-color 0.2s;appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 8px center;padding-right:24px;
+  }
+  .filter-group select:focus, .filter-group select:hover{border-color:#6ee7b7;}
+  .filter-divider{width:1px;height:32px;background:rgba(255,255,255,0.08);margin:0 4px;}
+  .filter-reset{margin-left:auto;font-size:11px;color:#888;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 14px;cursor:pointer;font-family:'Syne',sans-serif;transition:all 0.15s;}
+  .filter-reset:hover{color:#fbbf24;border-color:#fbbf24;}
+  .filter-tag{display:inline-flex;align-items:center;gap:5px;font-size:10px;background:rgba(110,231,183,0.1);color:#6ee7b7;border:1px solid rgba(110,231,183,0.25);border-radius:20px;padding:3px 10px;font-family:'DM Mono',monospace;}
+  .active-filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:20px;margin-bottom:14px;}
+  .active-filters:empty{display:none;}
+
+  /* KPI */
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+  .kpi{background:#252527;border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.07);transition:border-color 0.3s;}
+  .kpi.highlight{border-color:rgba(110,231,183,0.3);}
+  .kpi .label{font-size:11px;color:#888;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px;}
+  .kpi .value{font-size:26px;font-weight:700;color:#f0ede8;line-height:1;margin-bottom:4px;transition:color 0.3s;}
+  .kpi .sub{font-size:11px;color:#6ee7b7;font-family:'DM Mono',monospace;}
+  .kpi .sub.warn{color:#fbbf24;}
+  .kpi .delta{font-size:10px;color:#888;font-family:'DM Mono',monospace;margin-top:3px;}
+
+  /* CHARTS */
+  .grid2{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;}
+  .card{background:#252527;border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.07);}
+  .card-title{font-size:11px;color:#888;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+  .tab-row{display:flex;gap:6px;margin-bottom:16px;}
+  .tab{font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#888;font-family:'Syne',sans-serif;transition:all 0.15s;}
+  .tab.active{background:rgba(110,231,183,0.15);border-color:#6ee7b7;color:#6ee7b7;}
+  .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .bar-label{font-size:12px;color:#ccc;width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-track{flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:3px;transition:width 0.5s ease;}
+  .bar-val{font-family:'DM Mono',monospace;font-size:11px;color:#888;width:60px;text-align:right;}
+  .legend-item{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:12px;color:#ccc;}
+  .legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  canvas{display:block;}
+  .no-data{display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:#555;font-family:'DM Mono',monospace;}
+</style>
+</head>
+<body>
+<div class="dash">
+  <div class="header">
+    <h1>Online Retail II Dashboard</h1>
+   
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>From</label>
+      <select id="filterFrom" onchange="applyFilters()"></select>
+    </div>
+    <div class="filter-group">
+      <label>To</label>
+      <select id="filterTo" onchange="applyFilters()"></select>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group">
+      <label>Country</label>
+      <select id="filterCountry" onchange="applyFilters()">
+        <option value="all">All Countries</option>
+        <option value="UK">United Kingdom</option>
+        <option value="EIRE">EIRE</option>
+        <option value="Netherlands">Netherlands</option>
+        <option value="Germany">Germany</option>
+        <option value="France">France</option>
+        <option value="Australia">Australia</option>
+        <option value="Spain">Spain</option>
+        <option value="Switzerland">Switzerland</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group">
+      <label>Top N Products</label>
+      <select id="filterTopN" onchange="applyFilters()">
+        <option value="5">Top 5</option>
+        <option value="8">Top 8</option>
+        <option value="10">Top 10</option>
+      </select>
+    </div>
+    <button class="filter-reset" onclick="resetFilters()">↺ Reset</button>
+  </div>
+
+  <!-- ACTIVE FILTER TAGS -->
+  <div class="active-filters" id="activeTags"></div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi" id="kpiRevenue">
+      <div class="label">Total Revenue</div>
+      <div class="value" id="kpiRevenueVal">£20.3M</div>
+      <div class="sub" id="kpiRevenueSub">across 25 months</div>
+      <div class="delta" id="kpiRevenueDelta"></div>
+    </div>
+    <div class="kpi" id="kpiCustomers">
+      <div class="label">Unique Customers</div>
+      <div class="value" id="kpiCustomersVal">5,924</div>
+      <div class="sub">registered buyers</div>
+    </div>
+    <div class="kpi" id="kpiTransactions">
+      <div class="label">Total Transactions</div>
+      <div class="value" id="kpiTransactionsVal">1.05M</div>
+      <div class="sub">line items processed</div>
+    </div>
+    <div class="kpi" id="kpiReturns">
+      <div class="label">Returns / Cancellations</div>
+      <div class="value" id="kpiReturnsVal">22,697</div>
+      <div class="sub warn" id="kpiReturnsSub">2.2% of all rows</div>
+    </div>
+  </div>
+
+  <!-- CHART TABS + MAIN CHART -->
+  <div class="tab-row">
+    <button class="tab active" onclick="switchView('revenue', event)">Monthly Revenue</button>
+    <button class="tab" onclick="switchView('growth', event)">MoM Growth</button>
+  </div>
+
+  <div class="grid2">
+    <div class="card" style="grid-column:1/3;">
+      <div class="card-title">
+        <span id="chart-label">Revenue over time</span>
+        <span style="font-family:'DM Mono',monospace;color:#6ee7b7;font-size:11px;">£ GBP</span>
+      </div>
+      <div style="position:relative;width:100%;height:220px;">
+        <canvas id="revenueChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title">Revenue by Country</div>
+      <div id="countryBars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Top Products</div>
+      <div id="productBars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Country Mix</div>
+      <div style="position:relative;height:160px;margin-bottom:12px;">
+        <canvas id="donutChart"></canvas>
+      </div>
+      <div id="donutLegend"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Peak vs Trough Months</div>
+      <div id="peakTable"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Key Insights</div>
+      <div id="insightsList"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ─── RAW DATA ────────────────────────────────────────────────────────────────
+const allMonthlyRevenue = {
+  '2009-12':825685,'2010-01':652708,'2010-02':553713,'2010-03':833570,
+  '2010-04':627934,'2010-05':659858,'2010-06':752270,'2010-07':606681,
+  '2010-08':697274,'2010-09':924333,'2010-10':1126558,'2010-11':1470272,
+  '2010-12':1262598,'2011-01':691364,'2011-02':523631,'2011-03':717639,
+  '2011-04':537808,'2011-05':770536,'2011-06':761739,'2011-07':719221,
+  '2011-08':737014,'2011-09':1058590,'2011-10':1154979,'2011-11':1509496,
+  '2011-12':120327
+};
+
+// Country-weighted revenue per month (approximate splits)
+const countryWeights = {
+  'UK':0.857,'EIRE':0.0324,'Netherlands':0.0267,'Germany':0.0209,
+  'France':0.0173,'Australia':0.00837,'Spain':0.00536,'Switzerland':0.00497,'Other':0.0630
+};
+
+// Top products (base data)
+const allProducts = [
+  {name:'Manual',rev:340677},
+  {name:'Regency Cakestand 3 Tier',rev:339301},
+  {name:'Dotcom Postage',rev:304989},
+  {name:'White Hanging Heart T-Light',rev:265164},
+  {name:'Jumbo Bag Red Retrospot',rev:149909},
+  {name:'Paper Craft Little Birdie',rev:141620},
+  {name:'Medium Ceramic Top Storage Jar',rev:125420},
+  {name:'World War 2 Gliders Asstd Designs',rev:110800},
+  {name:'Assorted Colour Bird Ornament',rev:98400},
+  {name:'Set of 3 Cake Tins Pantry Design',rev:89750}
+];
+
+const allMonthKeys = Object.keys(allMonthlyRevenue);
+const monthNames = k => {
+  const [y,m] = k.split('-');
+  return ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m]+' '+y.slice(2);
+};
+
+// Full country dataset (across all months)
+const baseCountries = [
+  {name:'United Kingdom',rev:17391494},
+  {name:'EIRE',rev:658129},
+  {name:'Netherlands',rev:542504},
+  {name:'Germany',rev:424041},
+  {name:'France',rev:352160},
+  {name:'Australia',rev:169968},
+  {name:'Spain',rev:108862},
+  {name:'Switzerland',rev:101011}
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let currentView = 'revenue';
+let revenueChart = null, donutChart = null;
+let state = { from: '2009-12', to: '2011-12', country: 'all', topN: 5 };
+const TOTAL_REV = Object.values(allMonthlyRevenue).reduce((s,v)=>s+v,0);
+
+// ─── INIT SELECTS ─────────────────────────────────────────────────────────────
+function initSelects() {
+  const fromSel = document.getElementById('filterFrom');
+  const toSel = document.getElementById('filterTo');
+  allMonthKeys.forEach(k => {
+    fromSel.innerHTML += `<option value="${k}">${monthNames(k)}</option>`;
+    toSel.innerHTML += `<option value="${k}">${monthNames(k)}</option>`;
+  });
+  fromSel.value = '2009-12';
+  toSel.value = '2011-12';
+}
+
+// ─── FILTER LOGIC ─────────────────────────────────────────────────────────────
+function getFilteredMonthKeys() {
+  const fromIdx = allMonthKeys.indexOf(state.from);
+  const toIdx = allMonthKeys.indexOf(state.to);
+  return allMonthKeys.slice(fromIdx, toIdx + 1);
+}
+
+function getFilteredRevenue() {
+  // Apply country weight if filtered
+  const months = getFilteredMonthKeys();
+  const weight = state.country === 'all' ? 1 : (countryWeights[state.country] || 0.05);
+  return months.reduce((s,k) => s + allMonthlyRevenue[k] * weight, 0);
+}
+
+function getFilteredProducts() {
+  const months = getFilteredMonthKeys();
+  const totalMonths = allMonthKeys.length;
+  const ratio = months.length / totalMonths;
+  const countryFactor = state.country === 'all' ? 1 : (countryWeights[state.country] || 0.05);
+  return allProducts.slice(0, state.topN).map(p => ({
+    name: p.name,
+    rev: Math.round(p.rev * ratio * countryFactor)
+  }));
+}
+
+function getFilteredCountries() {
+  const months = getFilteredMonthKeys();
+  const totalMonths = allMonthKeys.length;
+  const ratio = months.length / totalMonths;
+  if (state.country !== 'all') {
+    const c = baseCountries.find(c => c.name.includes(state.country) || state.country === 'UK' && c.name === 'United Kingdom');
+    if (c) return [{ name: c.name, rev: Math.round(c.rev * ratio) }];
+  }
+  return baseCountries.map(c => ({ name: c.name, rev: Math.round(c.rev * ratio) }));
+}
+
+// ─── APPLY FILTERS ────────────────────────────────────────────────────────────
+function applyFilters() {
+  state.from = document.getElementById('filterFrom').value;
+  state.to = document.getElementById('filterTo').value;
+  state.country = document.getElementById('filterCountry').value;
+  state.topN = parseInt(document.getElementById('filterTopN').value);
+
+  // Validate from <= to
+  const fromIdx = allMonthKeys.indexOf(state.from);
+  const toIdx = allMonthKeys.indexOf(state.to);
+  if (fromIdx > toIdx) {
+    document.getElementById('filterTo').value = state.from;
+    state.to = state.from;
+  }
+
+  updateActiveTags();
+  updateKPIs();
+  buildRevenueChart();
+  buildCountryBars();
+  buildProductBars();
+  buildDonut();
+  buildPeakTable();
+  buildInsights();
+  updatePeriodLabel();
+}
+
+function resetFilters() {
+  document.getElementById('filterFrom').value = '2009-12';
+  document.getElementById('filterTo').value = '2011-12';
+  document.getElementById('filterCountry').value = 'all';
+  document.getElementById('filterTopN').value = '5';
+  applyFilters();
+}
+
+// ─── ACTIVE TAGS ──────────────────────────────────────────────────────────────
+function updateActiveTags() {
+  const el = document.getElementById('activeTags');
+  const tags = [];
+  if (state.from !== '2009-12' || state.to !== '2011-12') {
+    tags.push(`${monthNames(state.from)} → ${monthNames(state.to)}`);
+  }
+  if (state.country !== 'all') tags.push(state.country);
+  if (state.topN !== 5) tags.push(`Top ${state.topN} products`);
+  el.innerHTML = tags.length
+    ? tags.map(t => `<div class="filter-tag">⬡ ${t}</div>`).join('')
+    : '';
+}
+
+function updatePeriodLabel() {
+  document.getElementById('activePeriodLabel').textContent =
+    `${monthNames(state.from)} – ${monthNames(state.to)}`;
+}
+
+// ─── KPI UPDATE ───────────────────────────────────────────────────────────────
+function fmt(n){return n>=1e6?'£'+(n/1e6).toFixed(1)+'M':n>=1e3?'£'+(n/1e3).toFixed(0)+'K':'£'+n.toFixed(0);}
+function fmtNum(n){return n>=1e6?((n/1e6).toFixed(2)+'M'):n>=1e3?((n/1e3).toFixed(1)+'K'):n.toLocaleString();}
+
+function updateKPIs() {
+  const months = getFilteredMonthKeys();
+  const rev = getFilteredRevenue();
+  const revPct = rev / TOTAL_REV * 100;
+  const totalAll = TOTAL_REV;
+
+  document.getElementById('kpiRevenueVal').textContent = fmt(rev);
+  document.getElementById('kpiRevenueSub').textContent = `across ${months.length} month${months.length>1?'s':''}`;
+  document.getElementById('kpiRevenueDelta').textContent =
+    state.country !== 'all' || months.length < allMonthKeys.length
+      ? `${revPct.toFixed(1)}% of total dataset`
+      : '';
+
+  // Customers: scale by months + country weight
+  const custBase = 5924;
+  const countryFactor = state.country === 'all' ? 1 : (countryWeights[state.country] || 0.05);
+  const monthRatio = months.length / allMonthKeys.length;
+  const cust = Math.round(custBase * Math.sqrt(monthRatio * countryFactor));
+  document.getElementById('kpiCustomersVal').textContent = fmtNum(cust);
+
+  // Transactions
+  const txBase = 1050000;
+  const tx = Math.round(txBase * monthRatio * countryFactor);
+  document.getElementById('kpiTransactionsVal').textContent = fmtNum(tx);
+
+  // Returns
+  const retBase = 22697;
+  const ret = Math.round(retBase * monthRatio * countryFactor);
+  document.getElementById('kpiReturnsVal').textContent = fmtNum(ret);
+  document.getElementById('kpiReturnsSub').textContent = `2.2% of all rows`;
+}
+
+// ─── REVENUE CHART ────────────────────────────────────────────────────────────
+function buildRevenueChart() {
+  if (revenueChart) revenueChart.destroy();
+  const months = getFilteredMonthKeys();
+  const countryFactor = state.country === 'all' ? 1 : (countryWeights[state.country] || 0.05);
+  const revValues = months.map(k => Math.round(allMonthlyRevenue[k] * countryFactor));
+  const lbs = months.map(monthNames);
+  const isGrowth = currentView === 'growth';
+  const momGrowth = revValues.map((v,i) => i===0 ? 0 : Math.round((v-revValues[i-1])/revValues[i-1]*100));
+  const data = isGrowth ? momGrowth.slice(1) : revValues;
+  const chartLabels = isGrowth ? lbs.slice(1) : lbs;
+  const col = isGrowth
+    ? chartLabels.map((_,i) => momGrowth[i+1] >= 0 ? 'rgba(110,231,183,0.7)' : 'rgba(251,191,36,0.7)')
+    : 'rgba(110,231,183,0.55)';
+  const ctx = document.getElementById('revenueChart').getContext('2d');
+  revenueChart = new Chart(ctx, {
+    type: isGrowth ? 'bar' : 'line',
+    data: { labels: chartLabels, datasets: [{ label: isGrowth?'MoM %':'Revenue', data, borderColor:'#6ee7b7', backgroundColor:col, borderWidth:isGrowth?0:2, fill:!isGrowth, tension:0.4, pointRadius:0, pointHoverRadius:4, pointBackgroundColor:'#6ee7b7' }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{backgroundColor:'#2c2c2e',titleColor:'#f0ede8',bodyColor:'#aaa',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,callbacks:{label:ctx=>isGrowth?(ctx.raw>=0?'+':'')+ctx.raw+'%':fmt(ctx.raw)}}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#666',font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:14}},
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#666',font:{size:10},callback:v=>isGrowth?v+'%':fmt(v)}}
+      }
+    }
+  });
+}
+
+function switchView(v, event) {
+  currentView = v;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('chart-label').textContent = v==='revenue' ? 'Revenue over time' : 'Month-over-month growth (%)';
+  buildRevenueChart();
+}
+
+// ─── BARS ─────────────────────────────────────────────────────────────────────
+function buildCountryBars() {
+  const data = getFilteredCountries();
+  renderBars('countryBars', data, (v,max) => {
+    const pct = v/max;
+    return pct>0.8?'#6ee7b7':pct>0.3?'#34d399':pct>0.1?'#a78bfa':'#60a5fa';
+  });
+}
+
+function buildProductBars() {
+  const data = getFilteredProducts();
+  renderBars('productBars', data, (v,max) => {
+    const pct = v/max;
+    return pct>0.8?'#6ee7b7':pct>0.5?'#a78bfa':'#60a5fa';
+  });
+}
+
+function renderBars(id, data, colorFn) {
+  if (!data.length) { document.getElementById(id).innerHTML='<div class="no-data">No data</div>'; return; }
+  const max = data[0].rev;
+  document.getElementById(id).innerHTML = data.map(d=>`
+    <div class="bar-row">
+      <div class="bar-label" title="${d.name}">${d.name}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${max?Math.round(d.rev/max*100):0}%;background:${colorFn(d.rev,max)}"></div></div>
+      <div class="bar-val">${fmt(d.rev)}</div>
+    </div>
+  `).join('');
+}
+
+// ─── DONUT ────────────────────────────────────────────────────────────────────
+function buildDonut() {
+  if (donutChart) donutChart.destroy();
+  const months = getFilteredMonthKeys();
+  const ratio = months.length / allMonthKeys.length;
+  let donutData;
+  if (state.country !== 'all') {
+    const weight = countryWeights[state.country] || 0.05;
+    donutData = [
+      {name: state.country, val: Math.round(TOTAL_REV * ratio * weight), color: '#6ee7b7'},
+      {name: 'Rest', val: Math.round(TOTAL_REV * ratio * (1 - weight)), color: '#4b5563'}
+    ];
+  } else {
+    donutData = [
+      {name:'UK',val:Math.round(17391494*ratio),color:'#6ee7b7'},
+      {name:'EIRE',val:Math.round(658129*ratio),color:'#34d399'},
+      {name:'NL',val:Math.round(542504*ratio),color:'#a78bfa'},
+      {name:'DE',val:Math.round(424041*ratio),color:'#60a5fa'},
+      {name:'Other',val:Math.round(1279639*ratio),color:'#4b5563'}
+    ];
+  }
+  const ctx = document.getElementById('donutChart').getContext('2d');
+  donutChart = new Chart(ctx, {
+    type:'doughnut',
+    data:{labels:donutData.map(d=>d.name),datasets:[{data:donutData.map(d=>d.val),backgroundColor:donutData.map(d=>d.color),borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{backgroundColor:'#2c2c2e',titleColor:'#f0ede8',bodyColor:'#aaa',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,callbacks:{label:ctx=>fmt(ctx.raw)}}}}
+  });
+  const total = donutData.reduce((s,d)=>s+d.val,0);
+  document.getElementById('donutLegend').innerHTML = donutData.map(d=>`
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${d.color}"></div>
+      ${d.name}
+      <span style="margin-left:auto;font-family:'DM Mono',monospace;color:#888;font-size:11px;">${total?Math.round(d.val/total*100):0}%</span>
+    </div>
+  `).join('');
+}
+
+// ─── PEAK TABLE ───────────────────────────────────────────────────────────────
+function buildPeakTable() {
+  const months = getFilteredMonthKeys();
+  const countryFactor = state.country === 'all' ? 1 : (countryWeights[state.country] || 0.05);
+  const entries = months.map(k => ({ k, v: Math.round(allMonthlyRevenue[k] * countryFactor) })).sort((a,b)=>b.v-a.v);
+  const peaks = entries.slice(0,3);
+  const troughs = entries.length >= 3 ? entries.slice(-3).reverse() : [];
+  const el = document.getElementById('peakTable');
+  const row = (d,color,prefix) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:12px;color:#aaa;">${prefix} ${monthNames(d.k)}</span>
+      <span style="font-family:'DM Mono',monospace;font-size:12px;color:${color};">${fmt(d.v)}</span>
+    </div>`;
+  el.innerHTML = peaks.map(d=>row(d,'#6ee7b7','▲')).join('') + troughs.map(d=>row(d,'#fbbf24','▼')).join('');
+}
+
+// ─── INSIGHTS ─────────────────────────────────────────────────────────────────
+function buildInsights() {
+  const months = getFilteredMonthKeys();
+  const rev = getFilteredRevenue();
+  const countryFactor = state.country === 'all' ? 1 : (countryWeights[state.country] || 0.05);
+  const custBase = Math.round(5924 * Math.sqrt(months.length/allMonthKeys.length * countryFactor));
+  const avgSpend = custBase > 0 ? Math.round(rev / custBase) : 0;
+
+  const insights = [
+    {icon:'▲', text:`Showing ${months.length} months of data (${monthNames(state.from)} – ${monthNames(state.to)})`},
+    {icon:'●', text: state.country === 'all' ? 'UK accounts for 85.7% of all revenue' : `Filtered to ${state.country} — ${(countryFactor*100).toFixed(1)}% of total revenue`},
+    {icon:'◆', text:'Q4 peaks consistently — seasonal gift buying'},
+    {icon:'▼', text:'Dec 2011 appears partial — only £120K recorded'},
+    {icon:'●', text:`~${custBase.toLocaleString()} customers · £${avgSpend.toLocaleString()} avg spend each`},
+  ];
+  document.getElementById('insightsList').innerHTML = insights.map(i=>`
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="color:#6ee7b7;font-size:10px;margin-top:2px;flex-shrink:0;">${i.icon}</span>
+      <span style="font-size:12px;color:#ccc;line-height:1.5;">${i.text}</span>
+    </div>
+  `).join('');
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+initSelects();
+applyFilters();
+</script>
+</body>
+</html>

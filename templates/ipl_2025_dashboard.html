@@ -1,0 +1,375 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a1a; }
+  .dash { background: #1e1e1e; color: #f0f0f0; font-family: 'Georgia', serif; padding: 20px; min-height: 100vh; }
+  .header { text-align: center; padding: 20px 0 24px; border-bottom: 1px solid #333; margin-bottom: 24px; }
+  .header h1 { font-size: 26px; font-weight: 700; color: #fff; letter-spacing: 2px; text-transform: uppercase; }
+  .header p { font-size: 13px; color: #888; margin-top: 6px; letter-spacing: 1px; }
+  .section-title { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #888; margin-bottom: 14px; padding-left: 2px; }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .metric { background: #262626; border: 1px solid #333; border-radius: 8px; padding: 14px 16px; }
+  .metric .label { font-size: 11px; color: #777; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .metric .val { font-size: 22px; font-weight: 700; color: #f0f0f0; }
+  .metric .sub { font-size: 11px; color: #888; margin-top: 4px; }
+  .metric.gold .val { color: #f5c842; }
+  .metric.blue .val { color: #5ba3f5; }
+  .metric.green .val { color: #4cba7e; }
+  .metric.red .val { color: #e05c5c; }
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .chart-box { background: #262626; border: 1px solid #333; border-radius: 8px; padding: 16px; }
+  .chart-box h3 { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #888; margin-bottom: 14px; }
+  .wide-chart { background: #262626; border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 28px; }
+  .wide-chart h3 { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #888; margin-bottom: 14px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab { background: #333; border: 1px solid #444; border-radius: 6px; padding: 6px 14px; font-size: 12px; color: #aaa; cursor: pointer; letter-spacing: 0.5px; }
+  .tab.active { background: #f5c842; color: #1a1a1a; border-color: #f5c842; font-weight: 700; }
+  .leaderboard { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .leaderboard th { text-align: left; padding: 8px 10px; color: #666; font-weight: 600; letter-spacing: 0.5px; border-bottom: 1px solid #333; font-size: 11px; text-transform: uppercase; }
+  .leaderboard td { padding: 9px 10px; color: #ccc; border-bottom: 1px solid #2a2a2a; }
+  .leaderboard tr:hover td { background: #2e2e2e; }
+  .leaderboard .rank { color: #666; font-size: 11px; }
+  .leaderboard .name { color: #f0f0f0; font-weight: 500; }
+  .leaderboard .team-badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+  .bar-mini { height: 5px; border-radius: 3px; margin-top: 4px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .team-card { background: #262626; border: 1px solid #333; border-radius: 8px; padding: 14px; cursor: pointer; transition: border-color 0.2s; }
+  .team-card:hover { border-color: #f5c842; }
+  .team-card.selected { border-color: #f5c842; background: #2c2a1e; }
+  .team-card .tname { font-size: 13px; font-weight: 700; color: #f0f0f0; margin-bottom: 8px; }
+  .team-stat { display: flex; justify-content: space-between; font-size: 11px; color: #888; margin-bottom: 3px; }
+  .team-stat span:last-child { color: #bbb; font-weight: 500; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #888; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 2px; }
+  .filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-row label { font-size: 11px; color: #777; text-transform: uppercase; letter-spacing: 0.5px; }
+  select { background: #333; color: #ccc; border: 1px solid #444; border-radius: 5px; padding: 5px 8px; font-size: 12px; }
+</style>
+
+<div class="dash">
+  <div class="header">
+    <h1>IPL 2025 — Performance Dashboard</h1>
+    <p>Batting &amp; Bowling Analytics · All Teams</p>
+  </div>
+
+  <div class="section-title">Season Highlights</div>
+  <div class="metrics">
+    <div class="metric gold">
+      <div class="label">Top Run Scorer</div>
+      <div class="val">759</div>
+      <div class="sub">Sai Sudharsan · GT</div>
+    </div>
+    <div class="metric blue">
+      <div class="label">Highest SR (min 200 runs)</div>
+      <div class="val">196.25</div>
+      <div class="sub">Nicholas Pooran · LSG</div>
+    </div>
+    <div class="metric green">
+      <div class="label">Top Wicket Taker</div>
+      <div class="val">25 wkts</div>
+      <div class="sub">Prasidh Krishna · GT</div>
+    </div>
+    <div class="metric red">
+      <div class="label">Best Economy (min 15 wkts)</div>
+      <div class="val">6.67</div>
+      <div class="sub">Jasprit Bumrah · MI</div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-box">
+      <h3>Top 10 — Runs Scored</h3>
+      <div style="position:relative;height:260px"><canvas id="runsChart" role="img" aria-label="Top 10 run scorers IPL 2025">Top 10 run scorers: Sai Sudharsan 759, Surya Kumar Yadav 717, Virat Kohli 657, Shubman Gill 650, Mitchell Marsh 627, Shreyas Iyer 604, Yashasvi Jaiswal 559, Prabhsimran Singh 549, KL Rahul 539, Jos Buttler 538.</canvas></div>
+    </div>
+    <div class="chart-box">
+      <h3>Top 10 — Wickets Taken</h3>
+      <div style="position:relative;height:260px"><canvas id="wktsChart" role="img" aria-label="Top 10 wicket takers IPL 2025">Top 10 wicket takers: Prasidh Krishna 25, Noor Ahmad 24, Josh Hazlewood 22, Trent Boult 22, Arshdeep Singh 21, Sai Kishore 19, Jasprit Bumrah 18, Varun Chakaravarthy 17, Krunal Pandya 17, Bhuvneshwar Kumar 17.</canvas></div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-box">
+      <h3>Strike Rate vs Average (Top Batters)</h3>
+      <div style="position:relative;height:280px"><canvas id="scatterChart" role="img" aria-label="Scatter chart of strike rate vs average for top batters"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <h3>Economy vs Strike Rate (Top Bowlers)</h3>
+      <div style="position:relative;height:280px"><canvas id="bowlScatter" role="img" aria-label="Scatter chart of economy vs strike rate for top bowlers"></canvas></div>
+    </div>
+  </div>
+
+  <div class="wide-chart">
+    <h3>Team Comparison — Runs &amp; Wickets</h3>
+    <div style="position:relative;height:220px"><canvas id="teamChart" role="img" aria-label="Team comparison of total runs scored and wickets taken"></canvas></div>
+    <div class="legend" style="margin-top:12px">
+      <div class="legend-item"><div class="legend-dot" style="background:#f5c842"></div>Total Runs</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#5ba3f5"></div>Total Wickets</div>
+    </div>
+  </div>
+
+  <div class="two-col" style="margin-bottom:28px">
+    <div>
+      <div class="section-title">Batting Leaderboard</div>
+      <div class="filter-row">
+        <label>Sort by:</label>
+        <select id="batSort" onchange="renderBatTable()">
+          <option value="runs">Runs</option>
+          <option value="avg">Average</option>
+          <option value="sr">Strike Rate</option>
+          <option value="sixes">Sixes</option>
+        </select>
+      </div>
+      <table class="leaderboard" id="batTable"></table>
+    </div>
+    <div>
+      <div class="section-title">Bowling Leaderboard</div>
+      <div class="filter-row">
+        <label>Sort by:</label>
+        <select id="bowlSort" onchange="renderBowlTable()">
+          <option value="wkts">Wickets</option>
+          <option value="eco">Economy</option>
+          <option value="avg">Average</option>
+          <option value="sr">Strike Rate</option>
+        </select>
+      </div>
+      <table class="leaderboard" id="bowlTable"></table>
+    </div>
+  </div>
+
+  <div class="wide-chart">
+    <h3>Boundaries Breakdown — 4s vs 6s (Top 15 Batters)</h3>
+    <div style="position:relative;height:200px"><canvas id="boundChart" role="img" aria-label="Stacked bar chart of 4s and 6s for top 15 batters"></canvas></div>
+    <div class="legend" style="margin-top:12px">
+      <div class="legend-item"><div class="legend-dot" style="background:#4cba7e"></div>Fours</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e05c5c"></div>Sixes</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const batters = [
+  {name:"Sai Sudharsan",team:"GT",runs:759,avg:54.21,sr:156.17,fours:88,sixes:21,matches:15},
+  {name:"Surya Kumar Yadav",team:"MI",runs:717,avg:65.18,sr:167.91,fours:69,sixes:38,matches:16},
+  {name:"Virat Kohli",team:"RCB",runs:657,avg:54.75,sr:144.71,fours:66,sixes:19,matches:15},
+  {name:"Shubman Gill",team:"GT",runs:650,avg:50.00,sr:155.87,fours:62,sixes:24,matches:15},
+  {name:"Mitchell Marsh",team:"LSG",runs:627,avg:48.23,sr:163.70,fours:56,sixes:37,matches:13},
+  {name:"Shreyas Iyer",team:"PBKS",runs:604,avg:50.33,sr:175.07,fours:43,sixes:39,matches:17},
+  {name:"Yashasvi Jaiswal",team:"RR",runs:559,avg:43.00,sr:159.71,fours:60,sixes:28,matches:14},
+  {name:"Prabhsimran Singh",team:"PBKS",runs:549,avg:32.29,sr:160.52,fours:56,sixes:30,matches:17},
+  {name:"K L Rahul",team:"DC",runs:539,avg:53.90,sr:149.72,fours:52,sixes:21,matches:13},
+  {name:"Jos Buttler",team:"GT",runs:538,avg:59.78,sr:163.03,fours:52,sixes:24,matches:14},
+  {name:"Nicholas Pooran",team:"LSG",runs:524,avg:43.67,sr:196.25,fours:45,sixes:40,matches:14},
+  {name:"Heinrich Klaasen",team:"SRH",runs:487,avg:44.27,sr:172.69,fours:42,sixes:25,matches:13},
+  {name:"Priyansh Arya",team:"PBKS",runs:475,avg:27.94,sr:179.24,fours:55,sixes:25,matches:17},
+  {name:"Aiden Markram",team:"LSG",runs:445,avg:34.23,sr:148.82,fours:38,sixes:22,matches:13},
+  {name:"Abhishek Sharma",team:"SRH",runs:439,avg:33.77,sr:193.39,fours:46,sixes:28,matches:14},
+];
+
+const bowlers = [
+  {name:"Prasidh Krishna",team:"GT",wkts:25,eco:8.27,avg:19.52,sr:14.16,mat:15},
+  {name:"Noor Ahmad",team:"CSK",wkts:24,eco:8.16,avg:17.00,sr:12.50,mat:14},
+  {name:"Josh Hazlewood",team:"RCB",wkts:22,eco:8.77,avg:17.54,sr:12.00,mat:12},
+  {name:"Trent Boult",team:"MI",wkts:22,eco:8.96,avg:23.50,sr:15.72,mat:16},
+  {name:"Arshdeep Singh",team:"PBKS",wkts:21,eco:8.88,avg:24.66,sr:16.66,mat:17},
+  {name:"Sai Kishore",team:"GT",wkts:19,eco:9.24,avg:20.68,sr:13.42,mat:15},
+  {name:"Jasprit Bumrah",team:"MI",wkts:18,eco:6.67,avg:17.55,sr:15.77,mat:12},
+  {name:"Varun Chakaravarthy",team:"KKR",wkts:17,eco:7.66,avg:22.52,sr:17.64,mat:13},
+  {name:"Krunal Pandya",team:"RCB",wkts:17,eco:8.23,avg:22.29,sr:16.23,mat:15},
+  {name:"Bhuvneshwar Kumar",team:"RCB",wkts:17,eco:9.28,avg:28.41,sr:18.35,mat:14},
+  {name:"Vaibhav Arora",team:"KKR",wkts:17,eco:10.11,avg:25.29,sr:15.00,mat:12},
+  {name:"Pat Cummins",team:"SRH",wkts:16,eco:9.06,avg:28.12,sr:18.62,mat:14},
+  {name:"Marco Jansen",team:"PBKS",wkts:16,eco:9.20,avg:27.12,sr:17.68,mat:14},
+  {name:"Mohammed Siraj",team:"GT",wkts:16,eco:9.24,avg:32.93,sr:21.37,mat:15},
+  {name:"Yuzvendra Chahal",team:"PBKS",wkts:16,eco:9.55,avg:26.87,sr:16.87,mat:14},
+];
+
+const teamColors = {GT:'#f5c842',MI:'#1565c0',RCB:'#c62828',PBKS:'#e53935',RR:'#1976d2',
+  LSG:'#43a047',KKR:'#6a1b9a',DC:'#0288d1',SRH:'#ef6c00',CSK:'#fdd835'};
+
+const teamBgColors = {GT:'#2a2500',MI:'#0d2340',RCB:'#2a0a0a',PBKS:'#2a0a0a',RR:'#0a1e3a',
+  LSG:'#0a2010',KKR:'#1a0a2a',DC:'#062030',SRH:'#2a1200',CSK:'#2a2000'};
+
+function teamBadge(team) {
+  const c = teamColors[team] || '#888';
+  return `<span class="team-badge" style="background:${teamBgColors[team]||'#222'};color:${c};border:1px solid ${c}33">${team}</span>`;
+}
+
+const gridColor = 'rgba(255,255,255,0.06)';
+const tickColor = '#666';
+
+new Chart(document.getElementById('runsChart'), {
+  type:'bar',
+  data:{
+    labels: batters.slice(0,10).map(b=>b.name.split(' ').slice(-1)[0]),
+    datasets:[{label:'Runs',data:batters.slice(0,10).map(b=>b.runs),
+      backgroundColor: batters.slice(0,10).map(b=>teamColors[b.team]||'#888'),
+      borderRadius:4,borderSkipped:false}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>batters[i[0].dataIndex].name,label:i=>`${i.raw} runs (${batters[i[0].dataIndex].team})`}}},
+    scales:{x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}}},
+      y:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}},beginAtZero:false,min:500}}}
+});
+
+new Chart(document.getElementById('wktsChart'), {
+  type:'bar',
+  data:{
+    labels: bowlers.slice(0,10).map(b=>b.name.split(' ').slice(-1)[0]),
+    datasets:[{label:'Wickets',data:bowlers.slice(0,10).map(b=>b.wkts),
+      backgroundColor: bowlers.slice(0,10).map(b=>teamColors[b.team]||'#888'),
+      borderRadius:4,borderSkipped:false}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>bowlers[i[0].dataIndex].name,label:i=>`${i.raw} wickets (${bowlers[i[0].dataIndex].team})`}}},
+    scales:{x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}}},
+      y:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}},beginAtZero:false,min:16}}}
+});
+
+new Chart(document.getElementById('scatterChart'), {
+  type:'scatter',
+  data:{datasets:batters.map(b=>({label:b.name,data:[{x:b.avg,y:b.sr}],
+    backgroundColor:teamColors[b.team]||'#888',pointRadius:6,pointHoverRadius:8}))},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>`${i.dataset.label}: Avg ${i.parsed.x.toFixed(1)}, SR ${i.parsed.y.toFixed(1)}`}}},
+    scales:{
+      x:{title:{display:true,text:'Average',color:'#666',font:{size:10}},grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}},min:20,max:75},
+      y:{title:{display:true,text:'Strike Rate',color:'#666',font:{size:10}},grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}},min:130,max:210}}}
+});
+
+new Chart(document.getElementById('bowlScatter'), {
+  type:'scatter',
+  data:{datasets:bowlers.map(b=>({label:b.name,data:[{x:b.eco,y:b.sr}],
+    backgroundColor:teamColors[b.team]||'#888',pointRadius:6,pointHoverRadius:8}))},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>`${i.dataset.label}: Eco ${i.parsed.x.toFixed(2)}, SR ${i.parsed.y.toFixed(1)}`}}},
+    scales:{
+      x:{title:{display:true,text:'Economy Rate',color:'#666',font:{size:10}},grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}},min:6,max:11},
+      y:{title:{display:true,text:'Bowling SR',color:'#666',font:{size:10}},grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}},min:10,max:25}}}
+});
+
+const teams = ['GT','MI','RCB','PBKS','RR','LSG','KKR','DC','SRH','CSK'];
+const allBatters = [
+  {name:"Sai Sudharsan",team:"GT",runs:759,avg:54.21,sr:156.17,fours:88,sixes:21,matches:15},
+  {name:"Surya Kumar Yadav",team:"MI",runs:717,avg:65.18,sr:167.91,fours:69,sixes:38,matches:16},
+  {name:"Virat Kohli",team:"RCB",runs:657,avg:54.75,sr:144.71,fours:66,sixes:19,matches:15},
+  {name:"Shubman Gill",team:"GT",runs:650,avg:50.00,sr:155.87,fours:62,sixes:24,matches:15},
+  {name:"Mitchell Marsh",team:"LSG",runs:627,avg:48.23,sr:163.70,fours:56,sixes:37,matches:13},
+  {name:"Shreyas Iyer",team:"PBKS",runs:604,avg:50.33,sr:175.07,fours:43,sixes:39,matches:17},
+  {name:"Yashasvi Jaiswal",team:"RR",runs:559,avg:43.00,sr:159.71,fours:60,sixes:28,matches:14},
+  {name:"Prabhsimran Singh",team:"PBKS",runs:549,avg:32.29,sr:160.52,fours:56,sixes:30,matches:17},
+  {name:"K L Rahul",team:"DC",runs:539,avg:53.90,sr:149.72,fours:52,sixes:21,matches:13},
+  {name:"Jos Buttler",team:"GT",runs:538,avg:59.78,sr:163.03,fours:52,sixes:24,matches:14},
+  {name:"Nicholas Pooran",team:"LSG",runs:524,avg:43.67,sr:196.25,fours:45,sixes:40,matches:14},
+  {name:"Heinrich Klaasen",team:"SRH",runs:487,avg:44.27,sr:172.69,fours:42,sixes:25,matches:13},
+  {name:"Priyansh Arya",team:"PBKS",runs:475,avg:27.94,sr:179.24,fours:55,sixes:25,matches:17},
+  {name:"Aiden Markram",team:"LSG",runs:445,avg:34.23,sr:148.82,fours:38,sixes:22,matches:13},
+  {name:"Abhishek Sharma",team:"SRH",runs:439,avg:33.77,sr:193.39,fours:46,sixes:28,matches:14},
+  {name:"Rohit Sharma",team:"MI",runs:418,avg:29.86,sr:149.28,fours:41,sixes:22,matches:15},
+  {name:"Phil Salt",team:"RCB",runs:403,avg:33.58,sr:175.98,fours:48,sixes:22,matches:13},
+  {name:"Riyan Parag",team:"RR",runs:393,avg:32.75,sr:166.52,fours:27,sixes:27,matches:14},
+  {name:"Ajinkya Rahane",team:"KKR",runs:390,avg:35.45,sr:147.72,fours:36,sixes:20,matches:13},
+  {name:"Ryan Rickelton",team:"MI",runs:388,avg:29.85,sr:150.97,fours:47,sixes:17,matches:14},
+];
+const allBowlers = [
+  {name:"Prasidh Krishna",team:"GT",wkts:25,eco:8.27,avg:19.52,sr:14.16,mat:15},
+  {name:"Noor Ahmad",team:"CSK",wkts:24,eco:8.16,avg:17.00,sr:12.50,mat:14},
+  {name:"Josh Hazlewood",team:"RCB",wkts:22,eco:8.77,avg:17.54,sr:12.00,mat:12},
+  {name:"Trent Boult",team:"MI",wkts:22,eco:8.96,avg:23.50,sr:15.72,mat:16},
+  {name:"Arshdeep Singh",team:"PBKS",wkts:21,eco:8.88,avg:24.66,sr:16.66,mat:17},
+  {name:"Sai Kishore",team:"GT",wkts:19,eco:9.24,avg:20.68,sr:13.42,mat:15},
+  {name:"Jasprit Bumrah",team:"MI",wkts:18,eco:6.67,avg:17.55,sr:15.77,mat:12},
+  {name:"Varun Chakaravarthy",team:"KKR",wkts:17,eco:7.66,avg:22.52,sr:17.64,mat:13},
+  {name:"Krunal Pandya",team:"RCB",wkts:17,eco:8.23,avg:22.29,sr:16.23,mat:15},
+  {name:"Bhuvneshwar Kumar",team:"RCB",wkts:17,eco:9.28,avg:28.41,sr:18.35,mat:14},
+  {name:"Vaibhav Arora",team:"KKR",wkts:17,eco:10.11,avg:25.29,sr:15.00,mat:12},
+  {name:"Pat Cummins",team:"SRH",wkts:16,eco:9.06,avg:28.12,sr:18.62,mat:14},
+  {name:"Marco Jansen",team:"PBKS",wkts:16,eco:9.20,avg:27.12,sr:17.68,mat:14},
+  {name:"Mohammed Siraj",team:"GT",wkts:16,eco:9.24,avg:32.93,sr:21.37,mat:15},
+  {name:"Yuzvendra Chahal",team:"PBKS",wkts:16,eco:9.55,avg:26.87,sr:16.87,mat:14},
+  {name:"Harshal Patel",team:"SRH",wkts:16,eco:9.80,avg:26.87,sr:16.43,mat:13},
+  {name:"Kuldeep Yadav",team:"DC",wkts:15,eco:7.07,avg:24.06,sr:20.40,mat:14},
+  {name:"Khaleel Ahmed",team:"CSK",wkts:15,eco:9.57,avg:29.80,sr:18.66,mat:14},
+  {name:"Harshit Rana",team:"KKR",wkts:15,eco:10.18,avg:29.86,sr:17.60,mat:13},
+  {name:"Digvesh Singh",team:"LSG",wkts:14,eco:8.25,avg:30.64,sr:22.28,mat:13},
+];
+
+const teamRunMap = {};
+const teamWktMap = {};
+teams.forEach(t=>{teamRunMap[t]=0;teamWktMap[t]=0;});
+allBatters.forEach(b=>{if(teamRunMap[b.team]!==undefined)teamRunMap[b.team]+=b.runs;});
+allBowlers.forEach(b=>{if(teamWktMap[b.team]!==undefined)teamWktMap[b.team]+=b.wkts;});
+
+new Chart(document.getElementById('teamChart'), {
+  type:'bar',
+  data:{
+    labels: teams,
+    datasets:[
+      {label:'Total Runs',data:teams.map(t=>teamRunMap[t]),backgroundColor:'#f5c842aa',borderColor:'#f5c842',borderWidth:1,borderRadius:3,yAxisID:'y'},
+      {label:'Total Wickets',data:teams.map(t=>teamWktMap[t]),backgroundColor:'#5ba3f5aa',borderColor:'#5ba3f5',borderWidth:1,borderRadius:3,yAxisID:'y2'}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+    scales:{
+      x:{grid:{color:gridColor},ticks:{color:tickColor,font:{size:11}}},
+      y:{grid:{color:gridColor},ticks:{color:'#f5c842',font:{size:10}},position:'left'},
+      y2:{grid:{display:false},ticks:{color:'#5ba3f5',font:{size:10}},position:'right'}}}
+});
+
+new Chart(document.getElementById('boundChart'), {
+  type:'bar',
+  data:{
+    labels: batters.map(b=>b.name.split(' ').slice(-1)[0]),
+    datasets:[
+      {label:'Fours',data:batters.map(b=>b.fours),backgroundColor:'#4cba7ecc',borderRadius:3,stack:'bounds'},
+      {label:'Sixes',data:batters.map(b=>b.sixes),backgroundColor:'#e05c5ccc',borderRadius:3,stack:'bounds'}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{x:{stacked:true,grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}}},
+      y:{stacked:true,grid:{color:gridColor},ticks:{color:tickColor,font:{size:10}}}}}
+});
+
+function renderBatTable() {
+  const sort = document.getElementById('batSort').value;
+  const sorted = [...allBatters].sort((a,b)=>{
+    if(sort==='runs') return b.runs-a.runs;
+    if(sort==='avg') return b.avg-a.avg;
+    if(sort==='sr') return b.sr-a.sr;
+    if(sort==='sixes') return b.sixes-a.sixes;
+    return 0;
+  });
+  const maxVal = sort==='runs'?sorted[0].runs:sort==='avg'?sorted[0].avg:sort==='sr'?sorted[0].sr:sorted[0].sixes;
+  let html = `<thead><tr><th>#</th><th>Player</th><th>Team</th><th>Runs</th><th>Avg</th><th>SR</th><th>6s</th></tr></thead><tbody>`;
+  sorted.slice(0,10).forEach((b,i)=>{
+    const val = sort==='runs'?b.runs:sort==='avg'?b.avg:sort==='sr'?b.sr:b.sixes;
+    const pct = Math.round((val/maxVal)*100);
+    html += `<tr><td class="rank">${i+1}</td><td class="name">${b.name}</td><td>${teamBadge(b.team)}</td><td>${b.runs}</td><td>${b.avg.toFixed(1)}</td><td>${b.sr.toFixed(1)}</td><td>${b.sixes}</td></tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('batTable').innerHTML = html;
+}
+
+function renderBowlTable() {
+  const sort = document.getElementById('bowlSort').value;
+  const sorted = [...allBowlers].sort((a,b)=>{
+    if(sort==='wkts') return b.wkts-a.wkts;
+    if(sort==='eco') return a.eco-b.eco;
+    if(sort==='avg') return a.avg-b.avg;
+    if(sort==='sr') return a.sr-b.sr;
+    return 0;
+  });
+  let html = `<thead><tr><th>#</th><th>Player</th><th>Team</th><th>Wkts</th><th>Eco</th><th>Avg</th><th>SR</th></tr></thead><tbody>`;
+  sorted.slice(0,10).forEach((b,i)=>{
+    html += `<tr><td class="rank">${i+1}</td><td class="name">${b.name}</td><td>${teamBadge(b.team)}</td><td>${b.wkts}</td><td>${b.eco.toFixed(2)}</td><td>${b.avg.toFixed(1)}</td><td>${b.sr.toFixed(1)}</td></tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('bowlTable').innerHTML = html;
+}
+
+renderBatTable();
+renderBowlTable();
+</script>

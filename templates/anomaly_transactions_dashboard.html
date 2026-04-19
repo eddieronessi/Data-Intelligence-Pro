@@ -1,0 +1,292 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.dash{background:#1e1e1e;min-height:100vh;padding:20px;color:#f0f0f0}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #333}
+.header h1{font-size:40px;font-weight:500;color:#fff;letter-spacing:0.02em}
+.header .subtitle{font-size:12px;color:#888;margin-top:2px}
+.badge{background:#c0392b;color:#fff;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding:14px 16px;background:#2a2a2a;border-radius:10px;border:1px solid #333}
+.filter-group{display:flex;flex-direction:column;gap:4px;min-width:130px}
+.filter-group label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.06em}
+.filter-group select,.filter-group input{background:#1e1e1e;color:#f0f0f0;border:1px solid #404040;border-radius:6px;padding:5px 8px;font-size:12px;outline:none}
+.filter-group select:focus,.filter-group input:focus{border-color:#e74c3c}
+.reset-btn{align-self:flex-end;background:transparent;border:1px solid #555;color:#aaa;padding:5px 14px;border-radius:6px;font-size:12px;cursor:pointer}
+.reset-btn:hover{border-color:#e74c3c;color:#e74c3c}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:#2a2a2a;border-radius:10px;padding:14px 16px;border:1px solid #333;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.red::before{background:#e74c3c}
+.kpi.blue::before{background:#3498db}
+.kpi.green::before{background:#2ecc71}
+.kpi.amber::before{background:#f39c12}
+.kpi-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px}
+.kpi-value{font-size:26px;font-weight:500;color:#fff}
+.kpi-sub{font-size:11px;color:#666;margin-top:4px}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.chart-card{background:#2a2a2a;border-radius:10px;padding:16px;border:1px solid #333}
+.chart-title{font-size:13px;color:#bbb;font-weight:500;margin-bottom:12px}
+.chart-wrap{position:relative}
+.table-card{background:#2a2a2a;border-radius:10px;padding:16px;border:1px solid #333;margin-bottom:14px}
+.table-card table{width:100%;border-collapse:collapse;font-size:12px}
+.table-card thead th{color:#888;font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid #333;font-size:11px;text-transform:uppercase;letter-spacing:0.04em}
+.table-card tbody tr{border-bottom:1px solid #2f2f2f}
+.table-card tbody tr:hover{background:#333}
+.table-card tbody td{padding:7px 8px;color:#ddd}
+.anom-pill{background:#4a1515;color:#e74c3c;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+.norm-pill{background:#0d2b1a;color:#2ecc71;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+.no-data{text-align:center;color:#555;padding:30px;font-size:13px}
+</style>
+
+<div class="dash">
+  <div class="header">
+    <div>
+      <h1> Anomaly Transaction Dashboard</h1>
+      <div class="subtitle">200 transactions analyzed &bull; Real-time filtering</div>
+    </div>
+    <span class="badge" id="anomaly-badge">14 Anomalies Detected</span>
+  </div>
+
+  <div class="filters">
+    <div class="filter-group">
+      <label>Status</label>
+      <select id="f-status">
+        <option value="all">All transactions</option>
+        <option value="1">Anomalies only</option>
+        <option value="0">Normal only</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Day of Week</label>
+      <select id="f-day">
+        <option value="all">All days</option>
+        <option value="1">Day 1</option>
+        <option value="2">Day 2</option>
+        <option value="3">Day 3</option>
+        <option value="4">Day 4</option>
+        <option value="5">Day 5</option>
+        <option value="6">Day 6</option>
+        <option value="7">Day 7</option>
+        <option value="8">Day 8</option>
+        <option value="9">Day 9</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Age Group</label>
+      <select id="f-age">
+        <option value="all">All ages</option>
+        <option value="18-30">18–30</option>
+        <option value="31-45">31–45</option>
+        <option value="46-64">46–64</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Min Amount ($)</label>
+      <input type="number" id="f-min-amount" placeholder="0" min="0" step="1">
+    </div>
+    <div class="filter-group">
+      <label>Max Amount ($)</label>
+      <input type="number" id="f-max-amount" placeholder="240" min="0" step="1">
+    </div>
+    <div class="filter-group">
+      <label>Hour (0–19)</label>
+      <select id="f-hour">
+        <option value="all">All hours</option>
+      </select>
+    </div>
+    <button class="reset-btn" onclick="resetFilters()">Reset filters</button>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi blue">
+      <div class="kpi-label">Total transactions</div>
+      <div class="kpi-value" id="kpi-total">—</div>
+      <div class="kpi-sub">in current filter</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">Anomalies</div>
+      <div class="kpi-value" id="kpi-anom">—</div>
+      <div class="kpi-sub" id="kpi-anom-pct">—% anomaly rate</div>
+    </div>
+    <div class="kpi amber">
+      <div class="kpi-label">Avg Transaction</div>
+      <div class="kpi-value" id="kpi-avg-amt">—</div>
+      <div class="kpi-sub">average amount</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Avg Balance</div>
+      <div class="kpi-value" id="kpi-avg-bal">—</div>
+      <div class="kpi-sub">average account balance</div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Anomalies by hour of day</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="hourChart" role="img" aria-label="Bar chart of anomaly count by hour">Anomaly counts by hour of day.</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Transaction amount distribution</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="amtChart" role="img" aria-label="Histogram of transaction amounts">Transaction amount distribution.</canvas></div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Anomalies vs normal by age group</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="ageChart" role="img" aria-label="Grouped bar chart of anomaly vs normal by age group">Age group breakdown.</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Transactions by day of week</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="dayChart" role="img" aria-label="Bar chart of transactions by day">Day of week transaction counts.</canvas></div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="chart-title" style="margin-bottom:10px">Transaction records <span id="table-count" style="color:#555;font-size:12px;font-weight:400"></span></div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Txn ID</th>
+            <th>Amount</th>
+            <th>Hour</th>
+            <th>Day</th>
+            <th>Age</th>
+            <th>Balance</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="txn-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const RAW = [["10000","124.836","2","3","52","1607.36","0"],["10001","93.0868","17","8","32","559.568","0"],["10002","132.384","8","1","64","559.061","1"],["10003","176.151","1","6","39","1256.3","0"],["10004","88.2923","9","4","31","993.628","0"],["10005","88.2932","11","1","43","1527.2","0"],["10006","178.961","16","7","45","1239.79","0"],["10007","138.372","7","9","40","1791.52","1"],["10008","76.5263","10","4","31","1485.04","0"],["10009","127.128","3","4","41","1360.39","0"],["10010","76.8291","18","6","19","823.938","0"],["10011","76.7135","13","3","62","787.339","0"],["10012","112.098","7","6","43","974.12","1"],["10013","4.33599","4","7","31","1920.47","0"],["10014","13.7541","13","3","24","796.863","0"],["10015","71.8856","1","7","20","1130.26","0"],["10016","49.3584","8","3","64","0","0"],["10017","115.712","14","2","40","1337.9","0"],["10018","54.5988","16","4","63","2128.6","1"],["10019","29.3848","14","8","60","533.181","0"],["10020","173.282","12","9","64","2587.22","0"],["10021","88.7112","19","7","62","1091.12","0"],["10022","103.376","15","1","35","0","0"],["10023","28.7626","2","3","55","807.231","0"],["10024","72.7809","2","9","52","1665.22","0"],["10025","105.546","19","1","32","1999.66","0"],["10026","42.4503","17","9","42","1359.05","1"],["10027","118.785","10","8","54","1783.8","0"],["10028","69.9681","6","1","45","411.107","0"],["10029","85.4153","15","6","27","659.869","0"],["10030","69.9147","11","5","56","160.27","0"],["10031","192.614","5","6","34","697.468","0"],["10032","99.3251","1","5","56","1380.96","0"],["10033","47.1145","8","6","39","1106.33","0"],["10034","141.127","12","5","43","1433.92","0"],["10035","38.9578","12","5","61","531.743","0"],["10036","110.443","5","4","42","562.237","0"],["10037","2.01649","7","3","34","1102.31","0"],["10038","33.5907","4","3","30","698.676","0"],["10039","109.843","6","4","37","1650.92","0"],["10040","136.923","13","9","42","686.291","0"],["10041","108.568","15","2","21","752.305","0"],["10042","94.2176","3","9","27","1209.42","0"],["10043","84.9448","8","1","20","805.356","0"],["10044","26.0739","16","1","58","382.528","0"],["10045","64.0078","13","5","62","450.322","0"],["10046","76.9681","18","6","35","1268.88","0"],["10047","152.856","10","6","64","320.644","0"],["10048","117.181","19","3","53","1698.58","0"],["10049","11.848","17","7","64","654.8","0"],["10050","116.204","19","9","39","1308.11","0"],["10051","80.7459","5","8","51","684.794","0"],["10052","66.1539","9","6","64","542.379","0"],["10053","130.584","12","8","25","1123.05","0"],["10054","151.55","1","5","57","1525.89","0"],["10055","146.564","1","8","61","876.316","0"],["10056","58.0391","15","4","36","967.261","0"],["10057","84.5394","2","8","59","1403.71","0"],["10058","116.563","16","2","58","1420.26","0"],["10059","148.777","8","5","54","980.754","1"],["10060","76.0413","13","9","23","778.26","0"],["10061","90.717","1","4","43","1041.33","0"],["10062","44.6833","16","6","51","904.544","0"],["10063","40.1897","7","1","62","1156.49","0"],["10064","140.626","5","9","23","402.865","0"],["10065","167.812","3","1","54","1138.59","0"],["10066","96.3995","12","5","50","640.848","0"],["10067","150.177","16","4","39","1452.94","0"],["10068","118.082","19","3","38","663.766","0"],["10069","67.744","5","6","23","672.445","0"],["10070","118.07","14","2","23","1222.7","0"],["10071","176.902","5","3","21","1007.11","0"],["10072","98.2087","15","5","47","2138.33","0"],["10073","178.232","17","9","28","185.349","0"],["10074","1","14","2","47","1054.93","0"],["10075","141.095","5","8","48","1564.82","0"],["10076","104.352","12","2","41","710.843","0"],["10077","85.0496","16","5","26","544.721","0"],["10078","104.588","16","7","20","564.568","0"],["10079","1","7","8","48","194.019","0"],["10080","89.0164","4","1","57","1674.85","0"],["10081","117.856","1","6","54","835.191","0"],["10082","173.895","5","1","53","775.986","0"],["10083","74.0865","10","2","41","0","0"],["10084","59.5753","5","1","48","283.146","0"],["10085","74.9121","4","5","23","1732.69","0"],["10086","145.77","2","9","19","1151.55","0"],["10087","116.438","10","6","37","1583.25","0"],["10088","73.512","19","1","45","1520","0"],["10089","125.663","1","1","28","499.69","1"],["10090","104.854","5","2","21","2214.92","0"],["10091","148.432","13","9","32","1974.87","0"],["10092","64.8973","4","3","23","718.117","0"],["10093","83.6169","16","1","47","0","1"],["10094","80.3946","16","5","55","821.734","0"],["10095","26.8243","2","7","19","1119.15","0"],["10096","114.806","17","6","32","716.141","0"],["10097","113.053","12","1","28","889.239","1"],["10098","100.256","18","5","25","585.671","0"],["10099","88.2706","3","5","43","1460.82","0"],["10100","143.659","7","4","34","669.476","0"],["10101","96.6785","17","2","57","1133.95","0"],["10102","109.157","8","1","37","1217.68","0"],["10103","49.7523","15","2","29","686.699","0"],["10104","126.441","13","3","61","680.659","0"],["10105","111.576","12","5","44","808.016","0"],["10106","195.657","8","4","45","1340.13","0"],["10107","132.052","4","6","31","834.018","0"],["10108","155.013","17","5","40","1194.78","0"],["10109","56.3524","10","3","23","1115.67","0"],["10110","99.1736","9","1","57","1459.31","0"],["10111","115.461","16","6","38","1023.57","0"],["10112","60.1481","3","4","44","1272.77","0"],["10113","101.784","12","4","32","1218.18","0"],["10114","1","3","8","50","1007.77","0"],["10115","89.0178","14","6","53","946.978","0"],["10116","143.434","5","4","59","706.461","0"],["10117","168.282","15","3","38","1063.85","0"],["10118","125.399","7","9","60","1167.29","0"],["10119","174.649","7","7","24","1261.97","0"],["10120","116.625","3","4","48","1256.69","0"],["10121","72.5174","17","6","26","897.007","0"],["10122","122.551","9","5","26","1018.36","0"],["10123","143.19","8","1","55","823.474","0"],["10124","112.455","16","9","23","776.284","0"],["10125","133.741","3","9","59","877.073","0"],["10126","82.3938","7","9","29","1118.05","0"],["10127","114.264","2","3","57","1262.69","0"],["10128","41.6266","1","3","50","720.007","0"],["10129","108.37","18","7","24","1178.7","0"],["10130","68.9698","17","9","19","878.178","0"],["10131","59.0741","8","3","37","756.636","0"],["10132","76.5576","4","7","46","1180.33","0"],["10133","49.5804","7","2","33","1228.72","0"],["10134","93.7024","7","6","28","1200.93","0"],["10135","52.5665","2","1","41","1011.64","0"],["10136","82.5773","13","7","46","1124.03","0"],["10137","43.6619","6","6","43","1027.02","0"],["10138","75.9267","17","1","38","1173.68","0"],["10139","1","8","5","57","790.198","0"],["10140","76.8374","4","8","37","987.773","0"],["10141","1","11","5","34","1289.16","0"],["10142","79.5073","7","5","60","828.649","0"],["10143","84.3064","15","7","61","669.573","0"],["10144","60.7439","6","7","27","952.614","0"],["10145","70.7547","11","4","53","1120.96","0"],["10146","131.793","7","2","49","1006.96","1"],["10147","77.1208","10","5","34","1291.87","0"],["10148","81.9015","6","2","56","755.289","0"],["10149","32.7588","12","9","25","1181.56","0"],["10150","126.406","16","3","53","1157.55","0"],["10151","78.4083","18","9","36","1000.08","0"],["10152","68.4741","19","3","55","1077.01","0"],["10153","53.7099","7","4","28","982.756","0"],["10154","81.8649","13","9","22","966.052","0"],["10155","63.4046","3","8","51","1152.05","0"],["10156","113.41","11","7","25","1102.25","0"],["10157","67.9501","10","3","34","996.073","0"],["10158","65.3017","15","2","43","1264.42","0"],["10159","136.097","2","7","37","875.027","0"],["10160","65.9284","11","6","39","987.449","0"],["10161","62.0781","12","5","51","752.249","0"],["10162","50.6065","15","6","50","1199.9","0"],["10163","98.8706","1","7","53","793.023","0"],["10164","121.671","12","6","51","963.079","0"],["10165","109.399","4","1","52","1094.47","0"],["10166","69.9085","1","9","43","1087.14","0"],["10167","79.7617","9","5","53","854.117","0"],["10168","92.1034","14","3","52","1056.71","0"],["10169","97.2494","13","7","35","1031.83","0"],["10170","78.2116","7","3","46","1117.61","0"],["10171","91.2494","6","7","31","1055.73","0"],["10172","80.8413","2","7","47","1031.47","0"],["10173","61.9083","16","4","35","837.985","0"],["10174","137.553","2","6","64","770.378","0"],["10175","89.3012","18","5","55","854.117","0"],["10176","158.208","1","2","47","1134.65","0"],["10177","106.558","17","1","37","893.23","0"],["10178","75.1671","14","8","35","1142.33","0"],["10179","93.2617","13","4","53","786.069","0"],["10180","74.6481","3","5","61","1130.07","0"],["10181","110.434","11","7","49","980.124","0"],["10182","115.705","7","1","44","979.84","0"],["10183","95.3282","14","6","26","1061.36","0"],["10184","104.432","12","4","47","978.59","0"],["10185","93.2071","3","2","31","1018.59","0"],["10186","100.578","19","8","36","801.245","0"],["10187","86.3869","14","5","41","1022.46","0"],["10188","101.476","9","3","56","986.256","0"],["10189","94.7634","6","2","34","1098.46","0"],["10190","114.253","4","2","62","1055.03","0"],["10191","87.3026","11","4","53","993.453","0"],["10192","96.6073","5","3","47","1000.67","0"],["10193","102.461","7","8","43","1034.14","1"],["10194","94.3065","14","3","26","1049.88","0"],["10195","113.449","8","7","39","990.84","0"],["10196","100.44","17","9","54","960.49","0"],["10197","111.411","10","4","52","1009.55","0"],["10198","95.2271","3","6","45","1052.64","0"],["10199","105.358","1","1","39","967.21","1"]];
+
+const DATA = RAW.map(r=>({id:r[0],amount:parseFloat(r[1]),hour:parseInt(r[2]),day:parseInt(r[3]),age:parseInt(r[4]),balance:parseFloat(r[5]),is_anomaly:parseInt(r[6])}));
+
+for(let h=1;h<=19;h++){const o=document.createElement('option');o.value=h;o.textContent='Hour '+h;document.getElementById('f-hour').appendChild(o);}
+
+let hourChart,amtChart,ageChart,dayChart;
+
+function getFiltered(){
+  const status=document.getElementById('f-status').value;
+  const day=document.getElementById('f-day').value;
+  const ageG=document.getElementById('f-age').value;
+  const minA=parseFloat(document.getElementById('f-min-amount').value)||0;
+  const maxA=parseFloat(document.getElementById('f-max-amount').value)||9999;
+  const hour=document.getElementById('f-hour').value;
+  return DATA.filter(d=>{
+    if(status!=='all'&&d.is_anomaly!==parseInt(status))return false;
+    if(day!=='all'&&d.day!==parseInt(day))return false;
+    if(hour!=='all'&&d.hour!==parseInt(hour))return false;
+    if(d.amount<minA||d.amount>maxA)return false;
+    if(ageG==='18-30'&&(d.age<18||d.age>30))return false;
+    if(ageG==='31-45'&&(d.age<31||d.age>45))return false;
+    if(ageG==='46-64'&&(d.age<46||d.age>64))return false;
+    return true;
+  });
+}
+
+function avg(arr,key){if(!arr.length)return 0;return arr.reduce((s,d)=>s+d[key],0)/arr.length;}
+
+function updateKPIs(filtered){
+  const anom=filtered.filter(d=>d.is_anomaly).length;
+  const pct=filtered.length?((anom/filtered.length)*100).toFixed(1):0;
+  document.getElementById('kpi-total').textContent=filtered.length;
+  document.getElementById('kpi-anom').textContent=anom;
+  document.getElementById('kpi-anom-pct').textContent=pct+'% anomaly rate';
+  document.getElementById('kpi-avg-amt').textContent='$'+avg(filtered,'amount').toFixed(0);
+  document.getElementById('kpi-avg-bal').textContent='$'+avg(filtered,'balance').toFixed(0);
+  document.getElementById('anomaly-badge').textContent=anom+' Anomal'+(anom===1?'y':'ies')+' Detected';
+}
+
+function buildHourChart(filtered){
+  const counts=new Array(20).fill(0);
+  const anom=new Array(20).fill(0);
+  filtered.forEach(d=>{counts[d.hour]++;if(d.is_anomaly)anom[d.hour]++;});
+  const labels=Array.from({length:20},(_,i)=>i===0?'12a':'H'+i);
+  const cfg={type:'bar',data:{labels,datasets:[{label:'Normal',data:counts.map((c,i)=>c-anom[i]),backgroundColor:'#3498db33',borderColor:'#3498db',borderWidth:1},{label:'Anomaly',data:anom,backgroundColor:'#e74c3c99',borderColor:'#e74c3c',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:{color:'#888',font:{size:9}},grid:{color:'#2f2f2f'}},y:{stacked:true,ticks:{color:'#888',font:{size:10}},grid:{color:'#2f2f2f'}}}}};
+  if(hourChart)hourChart.destroy();
+  hourChart=new Chart(document.getElementById('hourChart'),cfg);
+}
+
+function buildAmtChart(filtered){
+  const bins=[0,25,50,75,100,125,150,175,200,240];
+  const normCounts=new Array(bins.length-1).fill(0);
+  const anomCounts=new Array(bins.length-1).fill(0);
+  filtered.forEach(d=>{
+    for(let i=0;i<bins.length-1;i++){if(d.amount>=bins[i]&&d.amount<bins[i+1]){if(d.is_anomaly)anomCounts[i]++;else normCounts[i]++;break;}}
+  });
+  const labels=bins.slice(0,-1).map((b,i)=>'$'+b+'-'+bins[i+1]);
+  const cfg={type:'bar',data:{labels,datasets:[{label:'Normal',data:normCounts,backgroundColor:'#3498db44',borderColor:'#3498db',borderWidth:1},{label:'Anomaly',data:anomCounts,backgroundColor:'#e74c3c99',borderColor:'#e74c3c',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:{color:'#888',font:{size:9},maxRotation:45},grid:{color:'#2f2f2f'}},y:{stacked:true,ticks:{color:'#888',font:{size:10}},grid:{color:'#2f2f2f'}}}}};
+  if(amtChart)amtChart.destroy();
+  amtChart=new Chart(document.getElementById('amtChart'),cfg);
+}
+
+function buildAgeChart(filtered){
+  const groups=['18-30','31-45','46-64'];
+  const norm=[0,0,0],anom=[0,0,0];
+  filtered.forEach(d=>{
+    let gi=d.age<=30?0:d.age<=45?1:2;
+    if(d.is_anomaly)anom[gi]++;else norm[gi]++;
+  });
+  const cfg={type:'bar',data:{labels:groups,datasets:[{label:'Normal',data:norm,backgroundColor:'#3498db55',borderColor:'#3498db',borderWidth:1},{label:'Anomaly',data:anom,backgroundColor:'#e74c3caa',borderColor:'#e74c3c',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#888',font:{size:11}},grid:{color:'#2f2f2f'}},y:{ticks:{color:'#888',font:{size:10}},grid:{color:'#2f2f2f'}}}}};
+  if(ageChart)ageChart.destroy();
+  ageChart=new Chart(document.getElementById('ageChart'),cfg);
+}
+
+function buildDayChart(filtered){
+  const norm=new Array(10).fill(0),anom=new Array(10).fill(0);
+  filtered.forEach(d=>{if(d.is_anomaly)anom[d.day]++;else norm[d.day]++;});
+  const labels=['','Mon','Tue','Wed','Thu','Fri','Sat','Sun','Day8','Day9'].slice(1);
+  const cfg={type:'bar',data:{labels:['Day1','Day2','Day3','Day4','Day5','Day6','Day7','Day8','Day9'],datasets:[{label:'Normal',data:norm.slice(1),backgroundColor:'#3498db44',borderColor:'#3498db',borderWidth:1},{label:'Anomaly',data:anom.slice(1),backgroundColor:'#e74c3c99',borderColor:'#e74c3c',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:{color:'#888',font:{size:10}},grid:{color:'#2f2f2f'}},y:{stacked:true,ticks:{color:'#888',font:{size:10}},grid:{color:'#2f2f2f'}}}}};
+  if(dayChart)dayChart.destroy();
+  dayChart=new Chart(document.getElementById('dayChart'),cfg);
+}
+
+function buildTable(filtered){
+  const tbody=document.getElementById('txn-table');
+  const show=filtered.slice(0,50);
+  document.getElementById('table-count').textContent='(showing '+show.length+' of '+filtered.length+')';
+  if(!show.length){tbody.innerHTML='<tr><td colspan="7" class="no-data">No transactions match current filters</td></tr>';return;}
+  tbody.innerHTML=show.map(d=>`<tr>
+    <td style="color:#999;font-family:var(--font-mono);font-size:11px">${d.id}</td>
+    <td style="color:#f0f0f0;font-weight:500">$${d.amount.toFixed(2)}</td>
+    <td style="color:#bbb">H${d.hour}</td>
+    <td style="color:#bbb">Day ${d.day}</td>
+    <td style="color:#bbb">${d.age}</td>
+    <td style="color:#bbb">$${d.balance.toFixed(0)}</td>
+    <td>${d.is_anomaly?'<span class="anom-pill">Anomaly</span>':'<span class="norm-pill">Normal</span>'}</td>
+  </tr>`).join('');
+}
+
+function render(){
+  const f=getFiltered();
+  updateKPIs(f);
+  buildHourChart(f);
+  buildAmtChart(f);
+  buildAgeChart(f);
+  buildDayChart(f);
+  buildTable(f);
+}
+
+function resetFilters(){
+  document.getElementById('f-status').value='all';
+  document.getElementById('f-day').value='all';
+  document.getElementById('f-age').value='all';
+  document.getElementById('f-min-amount').value='';
+  document.getElementById('f-max-amount').value='';
+  document.getElementById('f-hour').value='all';
+  render();
+}
+
+['f-status','f-day','f-age','f-hour'].forEach(id=>document.getElementById(id).addEventListener('change',render));
+['f-min-amount','f-max-amount'].forEach(id=>document.getElementById(id).addEventListener('input',render));
+
+render();
+</script>

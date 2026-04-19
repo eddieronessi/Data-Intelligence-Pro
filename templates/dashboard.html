@@ -1,0 +1,2133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='assets/brainwh.svg') }}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Intelligence Pro - AI-Powered Data Science Platform</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.18.0/plotly.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.3.4/axios.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbFkYnhoOZITSx-wLaaZnDGcF4lBg87-c",
+            authDomain: "data-intelligence-pro.firebaseapp.com",
+            projectId: "data-intelligence-pro",
+            storageBucket: "data-intelligence-pro.firebasestorage.app",
+            messagingSenderId: "401977080478",
+            appId: "1:401977080478:web:30730c2d0115afccd6598f",
+            measurementId: "G-HFER7T84L3"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        window.firebaseAuth = auth;
+        window.firebaseAuthMethods = {
+            onAuthStateChanged,
+            signOut
+        };
+        
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                updateUserProfile(user);
+            } else {
+                window.location.href = '/';
+            }
+        });
+        
+        function updateUserProfile(user) {
+            const displayName = user.displayName || 'User';
+            const email = user.email || 'user@example.com';
+            
+            if (document.getElementById('userName')) document.getElementById('userName').textContent = displayName;
+            if (document.getElementById('userEmail')) document.getElementById('userEmail').textContent = email;
+            
+            const initials = displayName.split(' ').map(name => name.charAt(0)).join('').toUpperCase().substring(0, 2);
+            if (document.getElementById('userInitials')) document.getElementById('userInitials').textContent = initials;
+            if (document.getElementById('dropdownInitials')) document.getElementById('dropdownInitials').textContent = initials;
+            
+            localStorage.setItem('userData', JSON.stringify({ uid: user.uid, email: user.email, displayName: user.displayName, photoURL: user.photoURL }));
+        }
+    </script>
+    
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #121212 100%); }
+        .gradient-bg-dark { background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 35px rgba(0,0,0,0.15); }
+        .loading { display: none; }
+        .loading.active { display: block; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-button.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .glow-effect { box-shadow: 0 0 20px rgba(102, 126, 234, 0.3); }
+        .comparison-section { border: 2px dashed #ccc; transition: all 0.3s ease; }
+        .comparison-section:hover { border-color: #667eea; background-color: #f8faff; }
+        .progress-bar { width: 100%; background-color: #e0e0e0; border-radius: 8px; overflow: hidden; margin: 10px 0; }
+        .progress-bar-fill { height: 20px; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 8px; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; }
+        .dataset-size-warning { background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%); border: 1px solid #f59e0b; color: #92400e; padding: 12px; border-radius: 8px; margin: 10px 0; display: none; }
+        .user-avatar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; cursor: pointer; transition: all 0.3s ease; }
+        .user-avatar:hover { transform: scale(1.05); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+        #profileDropdown { animation: slideDown 0.2s ease-out; min-width: 280px; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .profile-container { background: linear-gradient(135deg, #121212 100%); border-radius: 16px; padding: 24px; color: white; box-shadow: 0 8px 32px black; }
+        .profile-avatar-large { width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; font-weight: bold; margin: 0 auto 16px; border: 3px solid rgba(255, 255, 255, 0.3); }
+        .status-indicator { display: inline-block; width: 10px; height: 10px; background: #10b981; border-radius: 50%; margin-right: 8px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .logout-btn { background: #764ba2; border: 1px solid black; backdrop-filter: blur(10px); transition: all 0.3s ease; }
+        .logout-btn:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-2px); }
+        .suggestion-chip { cursor: pointer; border: 1px solid #e5e7eb; transition: all 0.2s; }
+        .suggestion-chip:hover { border-color: #667eea; color: #667eea; background-color: #f3f4f6; }
+
+        .markdown-content p { margin-bottom: 1rem; line-height: 1.6; }
+        .markdown-content ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1rem; }
+        .markdown-content ol { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 1rem; }
+        .markdown-content li { margin-bottom: 0.5rem; }
+        .markdown-content strong { font-weight: 700; color: #1f2937; }
+        .markdown-content h1 { font-size: 1.8rem; font-weight: bold; margin-top: 1.5rem; margin-bottom: 1rem; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+        .markdown-content h2 { font-size: 1.5rem; font-weight: bold; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #374151; }
+        .markdown-content h3 { font-size: 1.25rem; font-weight: bold; margin-top: 1.25rem; margin-bottom: 0.5rem; color: #4b5563; }
+        .markdown-content code { background-color: #f3f4f6; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.9em; color: #ef4444; }
+        .markdown-content pre code { background-color: transparent; padding: 0; color: inherit; }
+        .markdown-content pre { background-color: #1f2937; color: #f3f4f6; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; }
+        .markdown-content blockquote { border-left: 4px solid #667eea; padding-left: 1rem; color: #4b5563; font-style: italic; margin-bottom: 1rem; background-color: #f9fafb; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+        
+        .timeline-line { position: absolute; left: 19px; top: 0; bottom: 0; width: 2px; background-color: #e5e7eb; z-index: 0; }
+        @media (min-width: 768px) { .timeline-line { left: 19px; } }
+        
+        .vega-container canvas { margin: 0 auto !important; display: block !important; max-width: 100%; height: auto !important; }
+        .vega-embed { width: 100%; display: flex; justify-content: center; }
+        .js-plotly-plot, .plotly-graph-div { width: 100% !important; height: 100% !important; min-height: 400px; }
+    </style>
+</head>
+<body class="bg-black text-gray-900">
+    <header class="gradient-bg text-white shadow-xl">
+        <div class="container mx-auto px-6 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-brain text-4xl mr-4"></i>
+                    <div>
+                        <h1 class="text-3xl font-bold">Data Intelligence Pro</h1>
+                        <p class="text-sm opacity-90">Advanced AI-Powered Analytics Platform</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-6">
+                    <div class="text-right hidden lg:block">
+                        <p class="text-sm opacity-90 flex items-center justify-end">
+                            <span class="status-indicator"></span>Active Session
+                        </p>
+                        <p class="text-xs opacity-75">Multi-Dataset Analytics</p>
+                    </div>
+                    
+                    <div class="relative">
+                        <div class="user-avatar" id="userAvatar" onclick="toggleProfileDropdown()">
+                            <span id="userInitials">U</span>
+                        </div>
+                        
+                        <div id="profileDropdown" class="hidden absolute right-0 mt-2 bg-white rounded-xl shadow-2xl z-50 border border-gray-200">
+                            <div class="profile-container">
+                                <div class="profile-avatar-large"><span id="dropdownInitials">U</span></div>
+                                <div class="text-center mb-4">
+                                    <h3 class="text-lg font-bold" id="userName">User Name</h3>
+                                    <p class="text-sm opacity-90" id="userEmail">user@example.com</p>
+                                    <div class="flex items-center justify-center mt-2 text-xs opacity-75">
+                                        <span class="status-indicator"></span>
+                                        <span>Online</span>
+                                    </div>
+                                </div>
+                                <button onclick="logout()" class="logout-btn w-full py-3 px-4 rounded-lg text-white font-semibold flex items-center justify-center">
+                                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-6 py-8">
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8 card-hover glow-effect">
+            <h2 class="text-2xl font-bold mb-6 flex items-center text-gray-800">
+                <i class="fas fa-database mr-3 text-blue-600"></i> Dataset Management
+            </h2>
+            
+            <div class="flex mb-6 border-b">
+                <button onclick="switchTab('file-upload')" class="tab-button px-6 py-3 mr-2 rounded-t-lg bg-gray-200 active font-semibold"><i class="fas fa-upload mr-2"></i>Single Dataset</button>
+                <button onclick="switchTab('multi-upload')" class="tab-button px-6 py-3 mr-2 rounded-t-lg bg-gray-200 font-semibold"><i class="fas fa-layer-group mr-2"></i>Multi-Dataset</button>
+                <button onclick="switchTab('sql-connect')" class="tab-button px-6 py-3 rounded-t-lg bg-gray-200 font-semibold"><i class="fas fa-database mr-2"></i>SQL Database</button>
+            </div>
+
+            <div id="file-upload" class="tab-content active">
+                <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
+                    <i class="fas fa-cloud-upload-alt text-6xl text-gray-400 mb-4"></i>
+                    <p class="text-gray-600 mb-4 text-lg">Drag and drop your CSV or Excel file here, or click to browse</p>
+                    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" class="hidden">
+                    <button onclick="document.getElementById('fileInput').click()" class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 font-semibold shadow-lg">Choose File</button>
+                </div>
+                <div id="file-info" class="mt-4 hidden">
+                    <p class="text-sm text-gray-700">Selected: <span id="file-name" class="font-semibold"></span></p>
+                    <p class="text-sm text-gray-600">Size: <span id="file-size" class="font-semibold"></span></p>
+                    <div class="dataset-size-warning" id="size-warning">Large dataset detected. Processing may take several minutes.</div>
+                    <div class="progress-bar" id="upload-progress" style="display: none;">
+                        <div class="progress-bar-fill" id="progress-fill" style="width: 0%;">0%</div>
+                    </div>
+                    <button onclick="uploadFile()" class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 mt-3 font-semibold shadow-lg">Upload and Analyze</button>
+                </div>
+            </div>
+
+            <div id="multi-upload" class="tab-content">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="comparison-section rounded-xl p-6">
+                        <h4 class="font-semibold text-lg mb-4 text-center text-gray-700">Dataset A</h4>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mb-4">
+                            <input type="file" id="fileInputA" accept=".csv,.xlsx,.xls" class="hidden">
+                            <button onclick="document.getElementById('fileInputA').click()" class="bg-blue-500 text-white px-4 py-2 rounded">Choose File A</button>
+                        </div>
+                        <div id="file-info-a" class="hidden mt-2"><p class="text-sm text-center">Selected: <span id="file-name-a" class="font-semibold"></span></p></div>
+                    </div>
+                    <div class="comparison-section rounded-xl p-6">
+                        <h4 class="font-semibold text-lg mb-4 text-center text-gray-700">Dataset B</h4>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mb-4">
+                            <input type="file" id="fileInputB" accept=".csv,.xlsx,.xls" class="hidden">
+                            <button onclick="document.getElementById('fileInputB').click()" class="bg-purple-500 text-white px-4 py-2 rounded">Choose File B</button>
+                        </div>
+                        <div id="file-info-b" class="hidden mt-2"><p class="text-sm text-center">Selected: <span id="file-name-b" class="font-semibold"></span></p></div>
+                    </div>
+                </div>
+                <div class="text-center mt-6">
+                    <button onclick="uploadMultipleFiles()" class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 font-semibold shadow-lg">Upload and Compare Datasets</button>
+                </div>
+            </div>
+
+            <div id="sql-connect" class="tab-content">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <select id="dbType" class="w-full px-4 py-3 border rounded-lg mb-4">
+                            <option value="mysql">MySQL</option>
+                            <option value="sqlite">SQLite</option>
+                            <option value="postgresql">PostgreSQL</option>
+                        </select>
+                        <input type="text" id="dbHost" value="localhost" class="w-full px-4 py-3 border rounded-lg mb-4">
+                        <input type="text" id="dbPort" value="3306" class="w-full px-4 py-3 border rounded-lg mb-4">
+                        <input type="text" id="dbUser" value="root" class="w-full px-4 py-3 border rounded-lg mb-4">
+                        <input type="password" id="dbPassword" value="Uzumymw*1" class="w-full px-4 py-3 border rounded-lg mb-4">
+                        <input type="text" id="dbName" placeholder="Database Name" class="w-full px-4 py-3 border rounded-lg">
+                    </div>
+                    <div>
+                        <textarea id="sqlQuery" rows="10" placeholder="SELECT * FROM table_name LIMIT 1000" class="w-full px-4 py-3 border rounded-lg"></textarea>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button onclick="connectSQL()" class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 font-semibold shadow-lg">Connect and Load</button>
+                    <button onclick="testConnection()" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold ml-3 shadow-lg">Test Connection</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="gradient-bg-dark rounded-xl shadow-xl p-8 text-center fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                <p class="text-white text-lg" id="loading-text">Processing...</p>
+                <div class="progress-bar mt-4" id="processing-progress" style="display: none;"><div class="progress-bar-fill" id="processing-progress-fill">0%</div></div>
+            </div>
+        </div>
+
+        <div id="data-overview" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover transition-all duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                    <i class="fas fa-table mr-3 text-green-600"></i> Data Overview
+                </h2>
+                <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                    <i class="fas fa-expand text-xl"></i>
+                </button>
+            </div>
+            <div id="data-summary"></div>
+        </div>
+
+        <div id="multi-data-overview" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover transition-all duration-300">
+            <h2 class="text-2xl font-bold mb-6 flex items-center text-gray-800">
+                <i class="fas fa-not-equal mr-3 text-green-600"></i> Datasets Comparison Overview
+            </h2>
+            <div id="multi-data-summary"></div>
+        </div>
+
+        <div id="multi-analysis-dashboard" class="hidden">
+            <div class="bg-black rounded-xl shadow-lg p-6 mb-8 card-hover">
+                <h2 class="text-2xl font-bold mb-6 flex items-center text-white">
+                    <i class="fas fa-cogs mr-3 text-purple-600"></i> Multi-Dataset Analysis Controls
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <button onclick="performMultiEDA()" class="bg-blue-600 text-white px-6 py-4 rounded-xl hover:bg-blue-700 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-binoculars mr-2"></i>Exploratory Analysis</button>
+                    <button onclick="performMultiAdvancedAnalysis()" class="bg-indigo-600 text-white px-6 py-4 rounded-xl hover:bg-indigo-700 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-brain mr-2"></i>AI Analysis</button>
+                    <button onclick="fetchMultiAdvancedVisualizations()" class="bg-teal-600 text-white px-6 py-4 rounded-xl hover:bg-teal-700 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-chart-pie  mr-2"></i>Generate Dashboard</button>
+                    <button onclick="generateMultiWorkflow()" class="bg-white text-black px-6 py-4 rounded-xl hover:bg-gray-100 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-project-diagram mr-2"></i>Generate Workflow</button>
+                </div>
+            </div>
+
+            <div id="multi-advanced-viz-results" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover"></div>
+
+            <div id="multi-eda-results" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                        <i class="fas fa-binoculars mr-3 text-blue-500"></i>Multi-Dataset Exploratory Analysis
+                    </h2>
+                    <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                        <i class="fas fa-expand text-xl"></i>
+                    </button>
+                </div>
+                <div id="multi-eda-content"></div>
+            </div>
+            
+            <div id="multi-advanced-analysis-results" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                        <i class="fas fa-brain mr-3 text-indigo-500"></i>Multi-Dataset AI Analysis
+                    </h2>
+                    <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                        <i class="fas fa-expand text-xl"></i>
+                    </button>
+                </div>
+                <div id="multi-advanced-analysis-content"></div>
+            </div>
+
+            <div id="multi-workflow-section" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                        <i class="fas fa-project-diagram mr-3 text-black"></i>Multi-Dataset Workflow Generation
+                    </h2>
+                    <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                        <i class="fas fa-expand text-xl"></i>
+                    </button>
+                </div>
+                <div id="multi-workflow-content"></div>
+            </div>
+        </div>
+
+        <div id="analysis-dashboard" class="hidden">
+            <div class="bg-black rounded-xl shadow-lg p-6 mb-8 card-hover">
+                <h2 class="text-2xl font-bold mb-6 flex items-center text-white">
+                    <i class="fas fa-cogs mr-3 text-purple-600"></i> Advanced Analysis Controls
+                </h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button onclick="cleanData()" class="bg-violet-800 text-white px-6 py-4 rounded-xl hover:bg-violet-700 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-broom mr-2"></i>One-Click Clean</button>
+                    <button onclick="performEDA()" class="bg-blue-600 text-white px-6 py-4 rounded-xl hover:bg-blue-700 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-binoculars mr-2"></i>Exploratory Analysis</button>
+                    <button onclick="performAdvancedAnalysis()" class="bg-indigo-600 text-white px-6 py-4 rounded-xl hover:bg-indigo-700 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-brain mr-2"></i>AI Analysis</button>
+                    <button onclick="fetchPredefinedVisualizations()" class="bg-teal-600 text-white px-6 py-4 rounded-xl hover:bg-teal-700 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-chart-pie mr-2"></i>Generate Dashboard</button>
+                    <button onclick="showTimeSeries()" class="hidden bg-emerald-700 text-white px-6 py-4 rounded-xl hover:bg-emerald-500 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-chart-line mr-2"></i>Time Series & Forecast</button>
+                    <button onclick="showChatInterface()" class="bg-black text-white border border-gray-600 px-6 py-4 rounded-xl hover:bg-gray-800 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-chart-bar mr-2"></i>Prompt AI Visualizations</button>
+                    <button onclick="runClustering()" class="hidden bg-orange-600 text-white px-6 py-4 rounded-xl hover:bg-orange-700 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-project-diagram mr-2"></i>Find Segments</button>
+                    <button onclick="generateWorkflow()" class="bg-white text-black px-6 py-4 rounded-xl hover:bg-gray-100 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-project-diagram mr-2"></i>Generate Workflow</button>
+                    <button onclick="showDataIntelChatInterface()" class="bg-black border border-gray-600 text-white px-6 py-4 rounded-xl hover:bg-gray-800 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-comments mr-2"></i>Data Intelligence Chat Bot</button>
+                    <button onclick="showMLSection()" class="bg-purple-600 text-white px-6 py-4 rounded-xl hover:bg-purple-700 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-robot mr-2"></i>Build ML Model</button>
+                    <button onclick="exportReport()" class="bg-gray-700 text-white px-6 py-4 rounded-xl hover:bg-gray-800 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-file-pdf mr-2"></i>Export Report</button>
+                    <button onclick="exportJupyter()" class="hidden bg-yellow-600 text-white px-6 py-4 rounded-xl hover:bg-yellow-700 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-book mr-2"></i>Export Notebook</button>
+                    
+                </div>
+            </div>
+
+            <div id="clustering-section" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                        <i class="fas fa-project-diagram mr-3 text-orange-600"></i> Unsupervised Segments (K-Means)
+                    </h2>
+                    <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                        <i class="fas fa-expand text-xl"></i>
+                    </button>
+                </div>
+                <div id="clustering-personas" class="markdown-content mb-6 text-gray-800"></div>
+                <div id="clustering-plot" class="w-full bg-white rounded border" style="min-height: 400px;"></div>
+            </div>
+
+            <div id="timeseries-section" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                        <i class="fas fa-chart-line mr-3 text-cyan-600"></i> Time Series Analysis & Forecasting
+                    </h2>
+                    <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                        <i class="fas fa-expand text-xl"></i>
+                    </button>
+                </div>
+                <div id="timeseries-plots" class="grid grid-cols-1 gap-6"></div>
+            </div>
+
+            <div id="chat-section" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                        <i class="fas fa-chart-bar mr-3 text-black"></i> Advanced Visualizations
+                    </h2>
+                    <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                        <i class="fas fa-expand text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="mb-4 flex flex-wrap gap-2">
+                    <span class="text-sm font-semibold text-gray-600 pt-1">Try asking:</span>
+                    <button onclick="document.getElementById('chat-input').value='Suggest me some prompts to create visualizations on this data set'; sendChatMessage();" class="suggestion-chip px-3 py-1 rounded-full text-sm bg-white text-gray-700">Suggest some visualization prompts.</button>
+                    <button onclick="document.getElementById('chat-input').value='What were the top 3 drivers of revenue loss last quarter?'; sendChatMessage();" class="suggestion-chip px-3 py-1 rounded-full text-sm bg-white text-gray-700">What were the top 3 drivers of revenue loss?</button>
+                    <button onclick="document.getElementById('chat-input').value='Show me a distribution plot of numeric features.'; sendChatMessage();" class="suggestion-chip px-3 py-1 rounded-full text-sm bg-white text-gray-700">Show me a distribution plot of numeric features.</button>
+                </div>
+
+                <div id="chat-history" class="overflow-y-auto mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 flex flex-col space-y-4" style="height: 500px;">
+                    <div class="flex items-start">
+                        <div class="bg-gray-100 border border-gray-300 text-black p-4 rounded-lg rounded-tl-none markdown-content" style="max-width: 80%;">
+                            <p>Hi! I'm your PandasAI assistant. Ask me to calculate metrics, summarize findings, or plot interactive charts from your dataset.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <input type="text" id="chat-input" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black" placeholder="Ask a question or request a plot...">
+                    <button onclick="sendChatMessage()" class="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 font-semibold shadow-lg transition-colors">
+                        <i class="fas fa-paper-plane"></i> Send
+                    </button>
+                </div>
+            </div>
+
+            <div id="data-intel-chat-section" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                        <i class="fas fa-comments mr-3 text-black"></i> Data Intelligence Chat Bot
+                    </h2>
+                    <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                        <i class="fas fa-expand text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="mb-4 flex flex-wrap gap-2">
+                    <span class="text-sm font-semibold text-gray-600 pt-1">Try asking:</span>
+                    <button onclick="document.getElementById('data-intel-chat-input').value='Analyze the main trends in this dataset.'; sendDataIntelChatMessage();" class="suggestion-chip px-3 py-1 rounded-full text-sm bg-white text-gray-700">Analyze the main trends in this dataset.</button>
+                    <button onclick="document.getElementById('data-intel-chat-input').value='What are the key statistical outliers?'; sendDataIntelChatMessage();" class="suggestion-chip px-3 py-1 rounded-full text-sm bg-white text-gray-700">What are the key statistical outliers?</button>
+                    <button onclick="document.getElementById('data-intel-chat-input').value='Summarize the data quality.'; sendDataIntelChatMessage();" class="suggestion-chip px-3 py-1 rounded-full text-sm bg-white text-gray-700">Summarize the data quality.</button>
+                </div>
+
+                <div id="data-intel-chat-history" class="overflow-y-auto mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 flex flex-col space-y-4" style="height: 500px;">
+                    <div class="flex items-start">
+                        <div class="bg-gray-100 text-black border border-gray-300 p-4 rounded-lg rounded-tl-none markdown-content" style="max-width: 80%;">
+                            <p>Hello! I am your dedicated Data Intelligence Chat Bot. How can I assist you with your data today?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <input type="text" id="data-intel-chat-input" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black" placeholder="Ask a data intelligence question...">
+                    <button onclick="sendDataIntelChatMessage()" class="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 font-semibold shadow-lg transition-colors">
+                        <i class="fas fa-paper-plane"></i> Send
+                    </button>
+                </div>
+            </div>
+
+            <div id="eda-results" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                        <i class="fas fa-binoculars mr-3 text-blue-500"></i>Exploratory Data Analysis
+                    </h2>
+                    <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                        <i class="fas fa-expand text-xl"></i>
+                    </button>
+                </div>
+                <div id="eda-content"></div>
+            </div>
+            
+            <div id="predefined-viz-results" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover"></div>
+            
+            <div id="advanced-analysis-results" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                        <i class="fas fa-brain mr-3 text-indigo-500"></i>Advanced AI Analysis
+                    </h2>
+                    <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                        <i class="fas fa-expand text-xl"></i>
+                    </button>
+                </div>
+                <div id="advanced-analysis-content"></div>
+            </div>
+
+            <div id="workflow-section" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                        <i class="fas fa-project-diagram mr-3 text-black"></i>AI-Generated Data Science Workflow
+                    </h2>
+                    <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                        <i class="fas fa-expand text-xl"></i>
+                    </button>
+                </div>
+                <div id="workflow-content"></div>
+            </div>
+            
+            <div id="ml-section" class="bg-white rounded-xl shadow-lg p-6 mb-8 hidden card-hover">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                        <i class="fas fa-robot mr-3 text-purple-600"></i>Machine Learning Model
+                    </h2>
+                    <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                        <i class="fas fa-expand text-xl"></i>
+                    </button>
+                </div>
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <div><select id="targetColumn" class="w-full px-4 py-3 border rounded-lg"><option value="">Select target...</option></select></div>
+                    <div><select id="modelType" class="w-full px-4 py-3 border rounded-lg"><option value="auto">Auto Detect</option><option value="classification">Classification</option><option value="regression">Regression</option></select></div>
+                </div>
+                <button onclick="buildMLModel()" class="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold">Build Models</button>
+                <div id="ml-results" class="mt-6 hidden"></div>
+                
+                <div id="whatif-section" class="mt-8 bg-gray-50 p-6 rounded-xl border border-gray-200 hidden">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800"><i class="fas fa-sliders-h mr-2 text-blue-500"></i> "What-If" Scenario Simulator</h3>
+                    <p class="text-sm text-gray-600 mb-4">Adjust the top features to dynamically simulate predictive outcomes in real-time.</p>
+                    <div id="whatif-form" class="grid md:grid-cols-3 gap-4 mb-6"></div>
+                    <button onclick="simulateWhatIf()" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 shadow transition-colors">Simulate Outcome</button>
+                    <div id="whatif-result" class="mt-6 text-2xl font-bold text-green-600"></div>
+                </div>
+            </div>
+            
+            <div id="ai-insights" class="bg-white rounded-xl shadow-lg p-6 hidden card-hover"><h2 class="text-2xl font-bold mb-6"><i class="fas fa-lightbulb mr-3 text-yellow-500"></i>AI Insights</h2><div id="insights-content"></div></div>
+        </div>
+    </div>
+
+    <script>
+        let currentData = null; 
+        let multiDatasets = {};
+        window.predefinedPlotsSpecs = window.predefinedPlotsSpecs || {};
+        window.chatPlotsSpecs = window.chatPlotsSpecs || {};
+        
+        // --- FULLSCREEN UTILITY ---
+        function toggleFullScreenDashboard(btn) {
+            const section = btn.closest('.bg-white.rounded-xl');
+            if (!document.fullscreenElement) {
+                section.requestFullscreen().catch(err => {
+                    console.error("Error attempting to enable fullscreen:", err.message);
+                });
+                btn.innerHTML = '<i class="fas fa-compress text-xl"></i>';
+                section.classList.add('overflow-y-auto');
+            } else {
+                document.exitFullscreen();
+                btn.innerHTML = '<i class="fas fa-expand text-xl"></i>';
+                section.classList.remove('overflow-y-auto');
+            }
+        }
+        
+        document.addEventListener('fullscreenchange', (event) => {
+            if (!document.fullscreenElement) {
+                document.querySelectorAll('.fullscreen-btn').forEach(btn => {
+                    btn.innerHTML = '<i class="fas fa-expand text-xl"></i>';
+                    btn.closest('.bg-white.rounded-xl').classList.remove('overflow-y-auto');
+                });
+            }
+        });
+        
+        function getDynamicVegaConfig() {
+            return {
+                background: "transparent",
+                view: { stroke: "transparent" },
+                title: { color: "black", fontSize: 16, fontWeight: "bold" },
+                axis: {
+                    domainColor: "#d1d5db",
+                    gridColor: "#f3f4f6",
+                    tickColor: "black",
+                    labelColor: "black",
+                    labelFontWeight: "bold",
+                    titleColor: "black",
+                    titleFontWeight: "bold",
+                    labelAngle: -45,
+                    labelOverlap: true,
+                    titlePadding: 10
+                },
+                legend: {
+                    labelColor: "black",
+                    labelFontWeight: "bold",
+                    titleColor: "black",
+                    titleFontWeight: "bold",
+                    orient: "right", 
+                    columns: 1,      
+                    symbolType: "square",
+                    labelFontSize: 12,
+                    titleFontSize: 13,
+                    titlePadding: 10
+                },
+                text: { color: "black", fontWeight: "bold" }, 
+                mark: { tooltip: true }
+            };
+        }
+        
+        axios.defaults.timeout = 300000; 
+        axios.defaults.maxContentLength = 1073741824; 
+        axios.defaults.maxBodyLength = 1073741824;
+
+        function initializeUserProfile() {
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            if (userData.displayName || userData.email) {
+                document.getElementById('userName').textContent = userData.displayName || 'User';
+                document.getElementById('userEmail').textContent = userData.email || 'user@example.com';
+                document.getElementById('userInitials').textContent = (userData.displayName || 'U').charAt(0).toUpperCase();
+            }
+        }
+        document.addEventListener('DOMContentLoaded', initializeUserProfile);
+
+        function toggleProfileDropdown() { document.getElementById('profileDropdown').classList.toggle('hidden'); }
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('profileDropdown');
+            const avatar = document.getElementById('userAvatar');
+            if (!dropdown.contains(event.target) && !avatar.contains(event.target)) dropdown.classList.add('hidden');
+        });
+
+        async function logout() {
+            try {
+                if (window.firebaseAuth && window.firebaseAuthMethods) {
+                    await window.firebaseAuthMethods.signOut(window.firebaseAuth);
+                }
+            } catch (error) {
+                console.error("Firebase sign out error", error);
+            }
+            localStorage.removeItem('userData'); 
+            sessionStorage.clear();
+            window.location.href = '/';
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + ['Bytes', 'KB', 'MB', 'GB'][i];
+        }
+
+        // --- FILE INPUT LISTENERS ---
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            if(e.target.files[0]) {
+                document.getElementById('file-name').textContent = e.target.files[0].name;
+                document.getElementById('file-size').textContent = formatFileSize(e.target.files[0].size);
+                document.getElementById('file-info').classList.remove('hidden');
+            }
+        });
+        
+        document.getElementById('fileInputA').addEventListener('change', function(e) {
+            if(e.target.files[0]) {
+                document.getElementById('file-name-a').textContent = e.target.files[0].name;
+                document.getElementById('file-info-a').classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('fileInputB').addEventListener('change', function(e) {
+            if(e.target.files[0]) {
+                document.getElementById('file-name-b').textContent = e.target.files[0].name;
+                document.getElementById('file-info-b').classList.remove('hidden');
+            }
+        });
+
+        function showLoading(show) { document.getElementById('loading').classList[show ? 'add' : 'remove']('active'); }
+        function showMLSection() { document.getElementById('ml-section').classList.remove('hidden'); }
+
+        async function uploadFile() {
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) { alert('Select a file'); return; }
+            const formData = new FormData(); formData.append('file', file);
+            showLoading(true);
+            try {
+                const response = await axios.post('/upload', formData);
+                if (response.data.error) alert('Error: ' + response.data.error);
+                else { currentData = response.data; displayDataOverview(response.data); document.getElementById('analysis-dashboard').classList.remove('hidden'); }
+            } catch (error) { alert('Upload failed.'); }
+            finally { showLoading(false); }
+        }
+
+        async function uploadMultipleFiles() {
+            const fileA = document.getElementById('fileInputA').files[0];
+            const fileB = document.getElementById('fileInputB').files[0];
+            if (!fileA || !fileB) { alert('Please select both Dataset A and Dataset B'); return; }
+
+            showLoading(true);
+            try {
+                const formDataA = new FormData();
+                formDataA.append('file', fileA);
+                formDataA.append('dataset_id', 'A');
+                
+                const formDataB = new FormData();
+                formDataB.append('file', fileB);
+                formDataB.append('dataset_id', 'B');
+
+                await axios.post('/upload-multi', formDataA);
+                await axios.post('/upload-multi', formDataB);
+
+                const res = await axios.post('/compare-datasets');
+                if (res.data.error) {
+                    alert(res.data.error);
+                } else {
+                    displayMultiDataOverview(res.data);
+                    document.getElementById('multi-analysis-dashboard').classList.remove('hidden');
+                }
+            } catch (error) {
+                alert('Multi-upload failed.');
+                console.error(error);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function connectSQL() {
+            const dbType = document.getElementById('dbType').value;
+            const host = document.getElementById('dbHost').value;
+            const port = document.getElementById('dbPort').value;
+            const user = document.getElementById('dbUser').value;
+            const password = document.getElementById('dbPassword').value;
+            const database = document.getElementById('dbName').value;
+            const query = document.getElementById('sqlQuery').value;
+
+            if (!database && dbType !== 'sqlite') { alert('Database name is required'); return; }
+            if (!query) { alert('Query is required'); return; }
+
+            showLoading(true);
+            try {
+                const payload = {
+                    db_type: dbType,
+                    host: host,
+                    port: port,
+                    user: user,
+                    password: password,
+                    database: database,
+                    query: query
+                };
+                const response = await axios.post('/sql-connect', payload);
+                if (response.data.error) alert('Error: ' + response.data.error);
+                else {
+                    currentData = response.data;
+                    displayDataOverview(response.data);
+                    document.getElementById('analysis-dashboard').classList.remove('hidden');
+                }
+            } catch (error) {
+                alert('Connection failed: ' + (error.response?.data?.error || error.message));
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function testConnection() {
+            const dbType = document.getElementById('dbType').value;
+            const host = document.getElementById('dbHost').value;
+            const port = document.getElementById('dbPort').value;
+            const user = document.getElementById('dbUser').value;
+            const password = document.getElementById('dbPassword').value;
+            const database = document.getElementById('dbName').value;
+
+            showLoading(true);
+            try {
+                const payload = { db_type: dbType, host: host, port: port, user: user, password: password, database: database };
+                const response = await axios.post('/test-connection', payload);
+                if (response.data.error) alert('Test Error: ' + response.data.error);
+                else alert('Connection Test Successful!');
+            } catch (error) {
+                alert('Test failed: ' + (error.response?.data?.error || error.message));
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displayMultiDataOverview(data) {
+            if(!data || data.error) return;
+            document.getElementById('multi-data-overview').classList.remove('hidden');
+
+            let summaries = data.dataset_summaries;
+            let stats = data.statistical_comparison;
+
+            let html = '<div class="grid md:grid-cols-2 gap-6 mb-6">';
+            for (let key of ['A', 'B']) {
+                if(summaries[key]) {
+                    let s = summaries[key];
+                    html += `
+                    <div class="bg-gray-50 p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="font-bold text-gray-800 text-lg mb-4 border-b pb-2">Dataset ${key} Overview</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-white p-3 rounded-lg shadow-sm border"><p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Shape</p><p class="font-bold text-blue-600 text-lg">${s.shape[0]} × ${s.shape[1]}</p></div>
+                            <div class="bg-white p-3 rounded-lg shadow-sm border"><p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Quality</p><p class="font-bold text-green-600 text-lg">${parseFloat(s.data_quality_score).toFixed(1)}/100</p></div>
+                            <div class="bg-white p-3 rounded-lg shadow-sm border"><p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Num/Cat Cols</p><p class="font-bold text-purple-600 text-lg">${s.numeric_columns} / ${s.categorical_columns}</p></div>
+                            <div class="bg-white p-3 rounded-lg shadow-sm border"><p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Missing</p><p class="font-bold text-red-600 text-lg">${s.missing_values}</p></div>
+                        </div>
+                    </div>`;
+                }
+            }
+            html += '</div>';
+
+            if (stats && Object.keys(stats).length > 0) {
+                html += '<h3 class="font-bold text-gray-800 text-lg mb-4 mt-8 flex items-center"><i class="fas fa-balance-scale mr-2 text-indigo-500"></i> Statistical Comparison (Common Numeric Columns)</h3>';
+                html += '<div class="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200"><table class="w-full text-sm text-left">';
+                html += '<thead><tr class="bg-gray-100"><th class="px-6 py-4">Metric</th><th class="px-6 py-4">Dataset A</th><th class="px-6 py-4">Dataset B</th><th class="px-6 py-4">Difference</th></tr></thead><tbody>';
+                for (let metric in stats) {
+                    let diffClass = stats[metric].difference > 0 ? 'text-green-600 bg-green-50 px-2 py-1 rounded' : 'text-red-600 bg-red-50 px-2 py-1 rounded';
+                    html += `<tr class="border-b hover:bg-gray-50">
+                        <td class="px-6 py-3 font-semibold text-gray-700">${metric}</td>
+                        <td class="px-6 py-3">${stats[metric].A.toFixed(2)}</td>
+                        <td class="px-6 py-3">${stats[metric].B.toFixed(2)}</td>
+                        <td class="px-6 py-3"><span class="font-bold ${diffClass}">${stats[metric].difference.toFixed(2)}</span></td>
+                    </tr>`;
+                }
+                html += '</tbody></table></div>';
+            }
+
+            document.getElementById('multi-data-summary').innerHTML = html;
+        }
+
+        async function performMultiEDA() {
+            showLoading(true);
+            try {
+                const res = await axios.post('/analyze');
+                const data = res.data;
+                if(data.error) { alert(data.error); showLoading(false); return; }
+                const formattedMarkdown = marked.parse(data.groq_markdown_report || 'No AI report generated.');
+                const quality = data.ai_analysis?.data_quality || { summary_score: 0, completeness: { overall_score: 0 }, duplicates: { rows: 0 } };
+                const score = parseFloat(quality.summary_score).toFixed(1);
+                
+                const outliers = data.ai_analysis?.outliers || {};
+                const outlierHtml = Object.entries(outliers).slice(0, 5).map(([col, info]) => `
+                    <li class="flex justify-between items-center bg-red-50 p-3 rounded-lg border border-red-100">
+                        <span class="font-semibold text-red-800">${col}</span>
+                        <span class="text-sm font-bold bg-red-200 text-red-800 px-2 py-1 rounded">${info.outlier_count} outliers (${info.outlier_percentage.toFixed(1)}%)</span>
+                    </li>
+                `).join('') || '<li class="text-gray-500">No significant outliers detected.</li>';
+                
+                const correlations = data.correlation_analysis?.high_correlations || [];
+                const corrHtml = correlations.slice(0, 5).map(corr => `
+                    <li class="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <span class="font-semibold text-blue-800">${corr.var1} ↔ ${corr.var2}</span>
+                        <span class="text-sm font-bold bg-blue-200 text-blue-800 px-2 py-1 rounded">${corr.correlation.toFixed(2)}</span>
+                    </li>
+                `).join('') || '<li class="text-gray-500">No highly correlated features detected.</li>';
+
+                let html = `
+                    <div class="grid md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl shadow-md border border-green-200 hover:shadow-lg transition-shadow">
+                            <h3 class="font-bold text-green-800 mb-2 uppercase text-xs tracking-wider">Data Quality Score</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-green-600">${score}<span class="text-lg">/100</span></span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl shadow-md border border-blue-200 hover:shadow-lg transition-shadow">
+                            <h3 class="font-bold text-blue-800 mb-2 uppercase text-xs tracking-wider">Completeness</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-blue-600">${parseFloat(quality.completeness.overall_score).toFixed(1)}%</span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl shadow-md border border-purple-200 hover:shadow-lg transition-shadow">
+                            <h3 class="font-bold text-purple-800 mb-2 uppercase text-xs tracking-wider">Duplicates Found</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-purple-600">${quality.duplicates.rows}</span>
+                                <span class="text-sm font-bold text-purple-500 pb-1">rows</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-8 mb-8">
+                        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                            <h3 class="text-xl font-bold mb-4 flex items-center text-gray-800 border-b pb-2"><i class="fas fa-robot mr-3 text-indigo-500"></i> AI Executive Report</h3>
+                            <div class="markdown-content text-gray-700 max-h-[500px] overflow-y-auto pr-4">
+                                ${formattedMarkdown}
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                                <h3 class="text-xl font-bold mb-4 flex items-center text-gray-800"><i class="fas fa-exclamation-circle mr-3 text-red-500"></i> Top Outliers</h3>
+                                <ul class="space-y-3">
+                                    ${outlierHtml}
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                                <h3 class="text-xl font-bold mb-4 flex items-center text-gray-800"><i class="fas fa-link mr-3 text-blue-500"></i> High Correlations (>0.7)</h3>
+                                <ul class="space-y-3">
+                                    ${corrHtml}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('multi-eda-content').innerHTML = html;
+                document.getElementById('multi-eda-results').classList.remove('hidden');
+            } catch(e) { 
+                alert('Exploratory Data Analysis Error. Please check backend logs.'); 
+                console.error(e);
+            } finally { 
+                showLoading(false); 
+            }
+        }
+
+        async function performMultiAdvancedAnalysis() {
+            showLoading(true);
+            try {
+                const res = await axios.post('/advanced-analysis');
+                const data = res.data;
+                if(data.error) { alert(data.error); showLoading(false); return; }
+                const formattedMarkdown = marked.parse(data.groq_advanced_report || 'No AI deep-dive report was generated.');
+                const rowCount = data.analysis_results?.basic_info?.rows || 0;
+                const colCount = data.analysis_results?.basic_info?.columns || 0;
+                const outlierCount = Object.keys(data.analysis_results?.outliers || {}).length;
+
+                let html = `
+                    <div class="grid md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 rounded-xl shadow-md border border-indigo-200 hover:shadow-lg transition-shadow">
+                            <h3 class="font-bold text-indigo-800 mb-2 uppercase text-xs tracking-wider">Dataset Shape</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-indigo-600">${rowCount.toLocaleString()}</span>
+                                <span class="text-sm font-bold text-indigo-500 pb-1">rows</span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl shadow-md border border-purple-200 hover:shadow-lg transition-shadow">
+                            <h3 class="font-bold text-purple-800 mb-2 uppercase text-xs tracking-wider">Feature Count</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-purple-600">${colCount}</span>
+                                <span class="text-sm font-bold text-purple-500 pb-1">columns</span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-pink-50 to-pink-100 p-6 rounded-xl shadow-md border border-pink-200 hover:shadow-lg transition-shadow">
+                            <h3 class="font-bold text-pink-800 mb-2 uppercase text-xs tracking-wider">Features w/ Outliers</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-pink-600">${outlierCount}</span>
+                                <span class="text-sm font-bold text-pink-500 pb-1">detected</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
+                        <h3 class="text-2xl font-bold mb-6 flex items-center text-gray-800 border-b pb-4">
+                            <i class="fas fa-brain mr-3 text-indigo-600"></i> AI Deep-Dive Diagnostic Report
+                        </h3>
+                        <div class="markdown-content text-gray-800 text-lg leading-relaxed">
+                            ${formattedMarkdown}
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('multi-advanced-analysis-content').innerHTML = html;
+                document.getElementById('multi-advanced-analysis-results').classList.remove('hidden');
+            } catch(e) { 
+                alert('Advanced Analysis Error. Check backend logs.'); 
+                console.error(e);
+            }
+            finally { showLoading(false); }
+        }
+
+        async function generateMultiWorkflow() {
+            showLoading(true);
+            try {
+                const res = await axios.post('/generate-workflow');
+                const workflowArr = res.data.workflow;
+                if(res.data.error) { alert(res.data.error); showLoading(false); return; }
+                
+                if (!Array.isArray(workflowArr) || workflowArr[0]?.error) {
+                    const errMsg = workflowArr[0]?.error || "An unknown error occurred.";
+                    document.getElementById('multi-workflow-content').innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-lg shadow border border-red-200"><i class="fas fa-exclamation-triangle mr-2"></i>${errMsg}</div>`;
+                } else {
+                    let html = '<div class="relative w-full max-w-5xl mx-auto mt-4 pb-8">';
+                    html += '<div class="timeline-line hidden md:block"></div>';
+                    
+                    workflowArr.forEach((step, index) => {
+                        let compColor = step.complexity === 'Beginner' ? 'bg-green-100 text-green-800' : 
+                                       (step.complexity === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
+                                       
+                        const escapedCode = step.python_code ? step.python_code.replace(/`/g, '\\`').replace(/"/g, '&quot;') : '';
+                        
+                        html += `
+                        <div class="relative md:pl-16 mb-10 w-full group">
+                            <div class="hidden md:flex absolute left-[0px] top-0 w-10 h-10 rounded-full bg-black text-white font-bold items-center justify-center border-4 border-white shadow-lg z-10 group-hover:bg-gray-800 transition-colors">
+                                ${index + 1}
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                                <div class="bg-gray-50 border-b border-gray-100 px-6 py-4">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h3 class="text-xl font-bold text-gray-800 flex items-center">
+                                            <span class="md:hidden inline-flex w-6 h-6 rounded-full bg-black text-white text-xs items-center justify-center mr-2">${index + 1}</span>
+                                            ${step.step_name}
+                                        </h3>
+                                        <span class="text-xs font-semibold px-2 py-1 bg-gray-200 text-gray-700 rounded-lg shadow-sm">${step.phase}</span>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <span class="text-xs font-bold px-2 py-1 rounded-md ${compColor}">${step.complexity}</span>
+                                        ${step.estimated_time ? `<span class="text-xs font-bold px-2 py-1 rounded-md bg-blue-50 text-blue-700"><i class="far fa-clock mr-1"></i>${step.estimated_time}</span>` : ''}
+                                    </div>
+                                </div>
+                                
+                                <div class="px-6 py-5">
+                                    <p class="text-gray-700 mb-5 leading-relaxed">${step.description}</p>
+                                    
+                                    ${step.risk_warnings ? `
+                                    <div class="mb-5 bg-orange-50 border-l-4 border-orange-400 p-4 rounded text-sm text-orange-900 shadow-sm">
+                                        <strong class="flex items-center text-orange-700 mb-1"><i class="fas fa-exclamation-triangle mr-2"></i> Caution</strong> 
+                                        ${step.risk_warnings}
+                                    </div>` : ''}
+
+                                    ${step.python_code ? `
+                                    <div class="relative bg-gray-900 rounded-lg p-4 overflow-hidden shadow-inner mt-2">
+                                        <div class="absolute top-2 right-2 z-10">
+                                            <button onclick="navigator.clipboard.writeText(\`${escapedCode}\`); this.innerHTML='<i class=\\'fas fa-check\\'></i> Copied!';" class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded transition-colors shadow">
+                                                <i class="far fa-copy"></i> Copy
+                                            </button>
+                                        </div>
+                                        <pre class="text-sm text-green-400 font-mono mt-4 overflow-x-auto whitespace-pre-wrap leading-relaxed"><code>${step.python_code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+                                    </div>` : ''}
+                                    
+                                    ${step.dependencies && step.dependencies.length > 0 ? `
+                                    <div class="mt-4 pt-4 border-t border-gray-100 flex items-center text-xs text-gray-500 font-semibold">
+                                        <i class="fas fa-box-open mr-2 text-gray-400"></i> Packages: 
+                                        <span class="ml-2 text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded">${step.dependencies.join('</span> <span class="ml-1 text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded">')}</span>
+                                    </div>` : ''}
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                    document.getElementById('multi-workflow-content').innerHTML = html;
+                }
+                document.getElementById('multi-workflow-section').classList.remove('hidden');
+            } catch(e) { 
+                alert('An error occurred generating the workflow.'); 
+                console.error(e);
+            }
+            finally { showLoading(false); }
+        }
+
+        // --- NEW: Multi-Dataset Advanced Visualizations Action ---
+        async function fetchMultiAdvancedVisualizations() {
+            showLoading(true);
+            try {
+                const res = await axios.post('/multi-advanced-visualizations');
+                
+                if (res.data.error) {
+                    alert(res.data.error);
+                    showLoading(false);
+                    return;
+                }
+
+                const vizContainer = document.getElementById('multi-advanced-viz-results');
+
+                if (res.data.is_ipl_special) {
+                    vizContainer.innerHTML = `
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                                <i class="fas fa-trophy mr-3 text-yellow-500"></i> IPL 2025 Advanced Analytics Dashboard
+                            </h2>
+                            <div class="flex items-center">
+                                <button onclick="downloadDashboardHtml('${res.data.redirect_url}', 'ipl_2025_dashboard.html')" class="text-gray-500 hover:text-black focus:outline-none mr-4" title="Download HTML">
+                                    <i class="fas fa-download text-xl"></i>
+                                </button>
+                                <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                                    <i class="fas fa-expand text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="w-full" style="height: 850px;">
+                            <iframe src="${res.data.redirect_url}" class="w-full h-full border border-gray-200 rounded-xl shadow-inner"></iframe>
+                        </div>
+                    `;
+                    vizContainer.classList.remove('hidden');
+                    vizContainer.scrollIntoView({ behavior: 'smooth' });
+                }
+            } catch(e) {
+                console.error("Multi Viz Error:", e);
+                alert('Failed to generate visualizations.');
+            } finally {
+                showLoading(false);
+            }
+        }
+        // --- END NEW ---
+
+        async function cleanData() {
+            showLoading(true);
+            try {
+                const res = await axios.post('/clean-data');
+                if (res.data.error) alert(res.data.error);
+                else {
+                    alert("Data Cleaning Complete:\n" + res.data.message);
+                    if (res.data.summary) {
+                        displayDataOverview(res.data.summary);
+                        const overviewDiv = document.getElementById('data-overview');
+                        overviewDiv.classList.add('ring-4', 'ring-green-400');
+                        setTimeout(() => overviewDiv.classList.remove('ring-4', 'ring-green-400'), 1000);
+                    }
+                }
+            } catch (e) { alert('Error cleaning data'); }
+            finally { showLoading(false); }
+        }
+
+        async function runClustering() {
+            showLoading(true);
+            try {
+                const res = await axios.post('/clustering');
+                if (res.data.error) {
+                    alert(res.data.error);
+                } else {
+                    document.getElementById('clustering-personas').innerHTML = marked.parse(res.data.personas);
+                    Plotly.newPlot('clustering-plot', res.data.plot.data, res.data.plot.layout, {responsive: true});
+                    document.getElementById('clustering-section').classList.remove('hidden');
+                }
+            } catch (e) { alert('Clustering error: ' + (e.response?.data?.error || e.message)); }
+            finally { showLoading(false); }
+        }
+
+        async function showTimeSeries() {
+            showLoading(true);
+            try {
+                const res = await axios.post('/timeseries-analysis');
+                if (res.data.error) { 
+                    alert(res.data.error); 
+                } else {
+                    let html = '';
+                    let plots = [];
+                    for (const [key, plotData] of Object.entries(res.data.plots)) {
+                        const plotJson = JSON.parse(plotData);
+                        html += `<div id="ts-${key}" style="min-height: 400px;" class="border rounded-xl p-4 mb-6 bg-gray-50 shadow-sm"></div>`;
+                        plots.push({id: `ts-${key}`, data: plotJson.data, layout: plotJson.layout});
+                    }
+                    document.getElementById('timeseries-plots').innerHTML = html;
+                    document.getElementById('timeseries-section').classList.remove('hidden');
+                    plots.forEach(p => Plotly.newPlot(p.id, p.data, p.layout, {responsive: true}));
+                }
+            } catch(e) { alert('Error analyzing time series'); }
+            finally { showLoading(false); }
+        }
+
+        function exportJupyter() {
+            window.location.href = '/export-jupyter';
+        }
+
+        async function simulateWhatIf() {
+            let payload = { features: {} };
+            document.querySelectorAll('.whatif-input').forEach(inp => {
+                payload.features[inp.dataset.feat] = inp.value;
+            });
+            try {
+                const res = await axios.post('/simulate-what-if', payload);
+                if (res.data.error) alert(res.data.error);
+                else {
+                    document.getElementById('whatif-result').innerHTML = `<i class="fas fa-bullseye mr-2"></i> Predicted Outcome: <span>${res.data.prediction.toFixed(4)}</span>`;
+                }
+            } catch(e) { alert('Simulation error'); }
+        }
+
+        function displayDataOverview(data) {
+            if(!data) return;
+            document.getElementById('data-overview').classList.remove('hidden');
+            let totalMissing = 0;
+            if (data.missing_values) {
+                totalMissing = Object.values(data.missing_values).reduce((a, b) => a + b, 0);
+            }
+
+            let dtypeCounts = {};
+            if (data.dtypes) {
+                for (let col in data.dtypes) {
+                    let typeStr = data.dtypes[col].toLowerCase();
+                    let simpleType = typeStr.includes('int') ? 'Int' : typeStr.includes('float') ? 'Float' : typeStr.includes('datetime') ? 'Date' : typeStr.includes('category') ? 'Cat' : 'Text';
+                    dtypeCounts[simpleType] = (dtypeCounts[simpleType] || 0) + 1;
+                }
+            }
+            let dtypeHtml = Object.entries(dtypeCounts).map(([type, count]) => `${type}: ${count}`).join(' | ');
+
+            let topMissingHtml = '';
+            if (data.top_missing_features && Object.keys(data.top_missing_features).length > 0) {
+                topMissingHtml = '<div class="mt-4"><h4 class="font-bold text-gray-700 text-xs mb-2 uppercase tracking-wide">Top Columns Missing Data:</h4><div class="flex flex-wrap gap-2">';
+                for (const [col, count] of Object.entries(data.top_missing_features)) {
+                    topMissingHtml += `<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded border border-red-200 font-bold">${col}: ${count.toLocaleString()}</span>`;
+                }
+                topMissingHtml += '</div></div>';
+            } else {
+                topMissingHtml = '<div class="mt-4"><span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded border border-green-200 font-bold"><i class="fas fa-check-circle mr-1"></i> No Missing Data</span></div>';
+            }
+
+            let qualityScore = (data.quality_score && data.quality_score !== 'N/A') ? parseFloat(data.quality_score).toFixed(1) : 'N/A';
+            let duplicates = (data.duplicates !== undefined && data.duplicates !== 'N/A') ? data.duplicates.toLocaleString() : 'N/A';
+            let memoryUsage = data.memory_usage || 'Unknown';
+            let dataShape0 = data.shape && data.shape.length > 0 ? data.shape[0].toLocaleString() : 0;
+            let dataShape1 = data.shape && data.shape.length > 1 ? data.shape[1] : 0;
+
+            document.getElementById('data-summary').innerHTML = `
+                <div class="grid md:grid-cols-4 gap-6 mb-6">
+                    <div class="bg-blue-50 p-6 rounded-xl shadow-sm border border-blue-100 flex flex-col justify-center">
+                        <h3 class="font-bold text-blue-800 text-xs uppercase tracking-wider">Dataset Shape</h3>
+                        <p class="text-3xl font-black text-blue-600 mt-2">${dataShape0} <span class="text-lg text-blue-400 font-medium">× ${dataShape1}</span></p>
+                    </div>
+                    <div class="bg-indigo-50 p-6 rounded-xl shadow-sm border border-indigo-100 flex flex-col justify-center">
+                        <h3 class="font-bold text-indigo-800 text-xs uppercase tracking-wider">Data Types</h3>
+                        <p class="text-xl font-bold text-indigo-600 mt-2 leading-tight">${dtypeHtml}</p>
+                    </div>
+                    <div class="bg-green-50 p-6 rounded-xl shadow-sm border border-green-100 flex flex-col justify-center">
+                        <h3 class="font-bold text-green-800 text-xs uppercase tracking-wider">Quality Score</h3>
+                        <p class="text-3xl font-black text-green-600 mt-2">${qualityScore}<span class="text-lg text-green-400 font-medium">/100</span></p>
+                    </div>
+                    <div class="bg-purple-50 p-6 rounded-xl shadow-sm border border-purple-100 flex flex-col justify-center">
+                        <h3 class="font-bold text-purple-800 text-xs uppercase tracking-wider">Memory Usage</h3>
+                        <p class="text-3xl font-black text-purple-600 mt-2">${memoryUsage}</p>
+                    </div>
+                </div>
+                <div class="grid md:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-red-50 p-6 rounded-xl shadow-sm border border-red-100 flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-red-800 text-xs uppercase tracking-wider">Total Missing Values</h3>
+                            <p class="text-3xl font-black text-red-600 mt-2">${totalMissing.toLocaleString()}</p>
+                        </div>
+                        ${topMissingHtml}
+                    </div>
+                    <div class="bg-orange-50 p-6 rounded-xl shadow-sm border border-orange-100 flex flex-col justify-center">
+                        <h3 class="font-bold text-orange-800 text-xs uppercase tracking-wider">Duplicate Rows</h3>
+                        <p class="text-3xl font-black text-orange-600 mt-2">${duplicates}</p>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-6 overflow-auto max-h-80 border border-gray-200">
+                    <table class="w-full text-sm text-left">
+                        <thead><tr class="bg-gray-200 text-gray-700">${(data.columns || []).slice(0, 6).map(c => `<th class="px-3 py-2 font-semibold">${c}</th>`).join('')}</tr></thead>
+                        <tbody>${(data.sample_data || []).slice(0, 5).map(row => `<tr class="border-b border-gray-100 hover:bg-white">${data.columns.slice(0, 6).map(col => `<td class="px-3 py-2">${row[col] !== null && row[col] !== undefined ? row[col] : 'N/A'}</td>`).join('')}</tr>`).join('')}</tbody>
+                    </table>
+                </div>
+            `;
+            const targetSelect = document.getElementById('targetColumn');
+            targetSelect.innerHTML = '<option value="">Select target column...</option>';
+            if(data.columns) {
+                data.columns.forEach(col => targetSelect.innerHTML += `<option value="${col}">${col}</option>`);
+            }
+        }
+
+        function recursivelyClearLegends(obj) {
+            if (!obj || typeof obj !== 'object') return;
+            if (obj.encoding) {
+                for (let channel in obj.encoding) {
+                    if (obj.encoding[channel]) {
+                        obj.encoding[channel].legend = null;
+                    }
+                }
+            }
+            if (obj.layer) obj.layer.forEach(recursivelyClearLegends);
+            if (obj.hconcat) obj.hconcat.forEach(recursivelyClearLegends);
+            if (obj.vconcat) obj.vconcat.forEach(recursivelyClearLegends);
+        }
+
+        function recursivelyClearLabels(obj) {
+            if (!obj || typeof obj !== 'object') return;
+            if (obj.layer) {
+                obj.layer.forEach(l => {
+                    if (l.mark === 'text' || (l.mark && l.mark.type === 'text')) {
+                        if (typeof l.mark === 'string') l.mark = {type: 'text', opacity: 0};
+                        else l.mark.opacity = 0;
+                    }
+                    recursivelyClearLabels(l);
+                });
+            } else if (obj.mark === 'text' || (obj.mark && obj.mark.type === 'text')) {
+                if (typeof obj.mark === 'string') obj.mark = {type: 'text', opacity: 0};
+                else obj.mark.opacity = 0;
+            }
+            if (obj.hconcat) obj.hconcat.forEach(recursivelyClearLabels);
+            if (obj.vconcat) obj.vconcat.forEach(recursivelyClearLabels);
+        }
+
+        function togglePredefinedLegend(plotDivId, engine, btn) {
+            let plotState = window.predefinedPlotsSpecs[plotDivId];
+            if (!plotState) return;
+
+            plotState.showLegend = !plotState.showLegend;
+            
+            if (btn) {
+                const icon = btn.querySelector('i');
+                const span = btn.querySelector('span');
+                if (plotState.showLegend) {
+                    if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+                    if (span) span.innerText = 'Hide Legend';
+                    btn.classList.remove('bg-blue-50', 'text-blue-600', 'border-blue-200');
+                    btn.classList.add('bg-gray-100', 'text-gray-600', 'border-gray-300');
+                } else {
+                    if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+                    if (span) span.innerText = 'Show Legend';
+                    btn.classList.remove('bg-gray-100', 'text-gray-600', 'border-gray-300');
+                    btn.classList.add('bg-blue-50', 'text-blue-600', 'border-blue-200');
+                }
+            }
+
+            if (engine === 'vega') {
+                let currentSpec = JSON.parse(JSON.stringify(plotState.spec));
+                if (!plotState.showLegend) {
+                    if (!currentSpec.config) currentSpec.config = {};
+                    currentSpec.config.legend = {disable: true};
+                    recursivelyClearLegends(currentSpec);
+                }
+                
+                if (!plotState.showLabels) {
+                    recursivelyClearLabels(currentSpec);
+                }
+                vegaEmbed(`#${plotDivId}`, currentSpec, {actions: true}).catch(err => console.error("Vega Error:", err));
+            } else if (engine === 'plotly') {
+                Plotly.restyle(plotDivId, {showscale: plotState.showLegend}); 
+            }
+        }
+
+        function togglePredefinedLabels(plotDivId, engine, btn) {
+            let plotState = window.predefinedPlotsSpecs[plotDivId];
+            if (!plotState) return;
+
+            plotState.showLabels = !plotState.showLabels;
+            
+            if (btn) {
+                const icon = btn.querySelector('i');
+                const span = btn.querySelector('span');
+                if (plotState.showLabels) {
+                    if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+                    if (span) span.innerText = 'Hide Labels';
+                    btn.classList.remove('bg-blue-50', 'text-blue-600', 'border-blue-200');
+                    btn.classList.add('bg-gray-100', 'text-gray-600', 'border-gray-300');
+                } else {
+                    if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+                    if (span) span.innerText = 'Show Labels';
+                    btn.classList.remove('bg-gray-100', 'text-gray-600', 'border-gray-300');
+                    btn.classList.add('bg-blue-50', 'text-blue-600', 'border-blue-200');
+                }
+            }
+
+            if (engine === 'vega') {
+                let currentSpec = JSON.parse(JSON.stringify(plotState.spec));
+                
+                if (!plotState.showLegend) {
+                    if (!currentSpec.config) currentSpec.config = {};
+                    currentSpec.config.legend = {disable: true};
+                    recursivelyClearLegends(currentSpec);
+                }
+                
+                if (!plotState.showLabels) {
+                    recursivelyClearLabels(currentSpec);
+                }
+                vegaEmbed(`#${plotDivId}`, currentSpec, {actions: true}).catch(err => console.error("Vega Error:", err));
+            } else if (engine === 'plotly') {
+                if (plotState.showLabels) {
+                    Plotly.restyle(plotDivId, {'textfont.color': 'black'});
+                } else {
+                    Plotly.restyle(plotDivId, {'textfont.color': 'rgba(0,0,0,0)'});
+                }
+            }
+        }
+
+        function downloadDashboardHtml(url, filename) {
+            axios.get(url).then(response => {
+                const blob = new Blob([response.data], {type: 'text/html;charset=utf-8'});
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(link.href);
+            }).catch(err => {
+                console.error("Error downloading HTML", err);
+                alert("Failed to download the dashboard.");
+            });
+        }
+
+        async function fetchPredefinedVisualizations() {
+            showLoading(true);
+            try {
+                const res = await axios.post('/predefined-visualizations');
+                
+                if (res.data.error) {
+                    alert(res.data.error);
+                    showLoading(false);
+                    return;
+                }
+
+                const vizContainer = document.getElementById('predefined-viz-results');
+
+                // --- NEW: Anomaly Detection Special Handling ---
+                if (res.data.is_anomaly_special) {
+                    vizContainer.innerHTML = `
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                                <i class="fas fa-exclamation-triangle mr-3 text-red-600"></i> Anomaly Transactions Dashboard
+                            </h2>
+                            <div class="flex items-center">
+                                <button onclick="downloadDashboardHtml('${res.data.redirect_url}', 'anomaly_transactions_dashboard.html')" class="text-gray-500 hover:text-black focus:outline-none mr-4" title="Download HTML">
+                                    <i class="fas fa-download text-xl"></i>
+                                </button>
+                                <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                                    <i class="fas fa-expand text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="w-full" style="height: 850px;">
+                            <iframe src="${res.data.redirect_url}" class="w-full h-full border border-gray-200 rounded-xl shadow-inner"></iframe>
+                        </div>
+                    `;
+                    vizContainer.classList.remove('hidden');
+                    vizContainer.scrollIntoView({ behavior: 'smooth' });
+                    showLoading(false);
+                    return;
+                }
+
+                if (res.data.is_netflix_special) {
+                    vizContainer.innerHTML = `
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                                <i class="fas fa-film mr-3 text-red-600"></i> Netflix Advanced Analytics Dashboard
+                            </h2>
+                            <div class="flex items-center">
+                                <button onclick="downloadDashboardHtml('${res.data.redirect_url}', 'netflix_dashboard.html')" class="text-gray-500 hover:text-black focus:outline-none mr-4" title="Download HTML">
+                                    <i class="fas fa-download text-xl"></i>
+                                </button>
+                                <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                                    <i class="fas fa-expand text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="w-full" style="height: 850px;">
+                            <iframe src="${res.data.redirect_url}" class="w-full h-full border border-gray-200 rounded-xl shadow-inner"></iframe>
+                        </div>
+                    `;
+                    vizContainer.classList.remove('hidden');
+                    vizContainer.scrollIntoView({ behavior: 'smooth' });
+                    showLoading(false);
+                    return;
+                }
+
+                if (res.data.is_retail_special) {
+                    vizContainer.innerHTML = `
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                                <i class="fas fa-shopping-cart mr-3 text-emerald-600"></i> Online Retail II Advanced Dashboard
+                            </h2>
+                            <div class="flex items-center">
+                                <button onclick="downloadDashboardHtml('${res.data.redirect_url}', 'online_retail_dashboard.html')" class="text-gray-500 hover:text-black focus:outline-none mr-4" title="Download HTML">
+                                    <i class="fas fa-download text-xl"></i>
+                                </button>
+                                <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                                    <i class="fas fa-expand text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="w-full" style="height: 850px;">
+                            <iframe src="${res.data.redirect_url}" class="w-full h-full border border-gray-200 rounded-xl shadow-inner"></iframe>
+                        </div>
+                    `;
+                    vizContainer.classList.remove('hidden');
+                    vizContainer.scrollIntoView({ behavior: 'smooth' });
+                    showLoading(false);
+                    return;
+                }
+
+                if (res.data.is_spotify_special) {
+                    vizContainer.innerHTML = `
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                                <i class="fab fa-spotify mr-3 text-green-500"></i> Spotify Global Top 50 Dashboard
+                            </h2>
+                            <div class="flex items-center">
+                                <button onclick="downloadDashboardHtml('${res.data.redirect_url}', 'spotify_dashboard.html')" class="text-gray-500 hover:text-black focus:outline-none mr-4" title="Download HTML">
+                                    <i class="fas fa-download text-xl"></i>
+                                </button>
+                                <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                                    <i class="fas fa-expand text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="w-full" style="height: 850px;">
+                            <iframe src="${res.data.redirect_url}" class="w-full h-full border border-gray-200 rounded-xl shadow-inner"></iframe>
+                        </div>
+                    `;
+                    vizContainer.classList.remove('hidden');
+                    vizContainer.scrollIntoView({ behavior: 'smooth' });
+                    showLoading(false);
+                    return;
+                }
+
+                if (res.data.is_ncr_special) {
+                    vizContainer.innerHTML = `
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                                <i class="fas fa-car mr-3 text-yellow-500"></i> NCR Ride Bookings Dashboard
+                            </h2>
+                            <div class="flex items-center">
+                                <button onclick="downloadDashboardHtml('${res.data.redirect_url}', 'ncr_ride_bookings_dashboard.html')" class="text-gray-500 hover:text-black focus:outline-none mr-4" title="Download HTML">
+                                    <i class="fas fa-download text-xl"></i>
+                                </button>
+                                <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                                    <i class="fas fa-expand text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="w-full" style="height: 850px;">
+                            <iframe src="${res.data.redirect_url}" class="w-full h-full border border-gray-200 rounded-xl shadow-inner"></iframe>
+                        </div>
+                    `;
+                    vizContainer.classList.remove('hidden');
+                    vizContainer.scrollIntoView({ behavior: 'smooth' });
+                    showLoading(false);
+                    return;
+                }
+
+                const plotlyPlots = res.data.plotly_plots || [];
+                const vegaSpecs = res.data.vega_specs || [];
+                const vegaData = res.data.vega_data || [];
+                
+                vizContainer.innerHTML = `
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                            <i class="fas fa-chart-pie mr-3 text-indigo-500"></i> Predefined Visualizations
+                        </h2>
+                        <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                            <i class="fas fa-expand text-xl"></i>
+                        </button>
+                    </div>
+                    <div id="viz-grid" class="grid grid-cols-1 gap-8"></div>
+                `;
+                vizContainer.classList.remove('hidden');
+                const grid = document.getElementById('viz-grid');
+                
+                window.predefinedPlotsSpecs = {};
+
+                plotlyPlots.forEach((fig, i) => {
+                    const id = `plotly-viz-${i}`;
+                    window.predefinedPlotsSpecs[id] = { engine: 'plotly', showLegend: true, showLabels: true };
+                    
+                    grid.insertAdjacentHTML('beforeend', `
+                        <div class="bg-white border rounded-xl p-4 shadow-sm relative flex flex-col w-full" style="min-height: 450px;">
+                            <div class="absolute top-2 right-2 z-10 flex gap-2">
+                                <button onclick="togglePredefinedLegend('${id}', 'plotly', this)" class="text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-full shadow border border-gray-300 transition-all flex items-center gap-1">
+                                    <i class="fas fa-eye-slash"></i> <span>Hide Legend</span>
+                                </button>
+                                <button onclick="togglePredefinedLabels('${id}', 'plotly', this)" class="text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-full shadow border border-gray-300 transition-all flex items-center gap-1">
+                                    <i class="fas fa-eye-slash"></i> <span>Hide Labels</span>
+                                </button>
+                            </div>
+                            <div id="${id}" class="w-full h-full mt-8"></div>
+                        </div>
+                    `);
+                    Plotly.newPlot(id, fig.data, fig.layout, {responsive: true});
+                });
+
+                vegaSpecs.forEach((spec, i) => {
+                    const id = `vega-viz-${i}`;
+                    
+                    spec.data = { values: vegaData };
+                    spec.width = "container"; 
+                    spec.height = 350; 
+                    spec.autosize = {type: "fit", contains: "padding"};
+                    spec.config = getDynamicVegaConfig();
+
+                    if (typeof spec.title === 'string') {
+                        spec.title = { text: spec.title, color: 'black', fontWeight: 'bold' };
+                    } else if (spec.title) {
+                        spec.title.color = 'black';
+                        spec.title.fontWeight = 'bold';
+                    }
+
+                    window.predefinedPlotsSpecs[id] = { engine: 'vega', spec: JSON.parse(JSON.stringify(spec)), showLegend: true, showLabels: true };
+
+                    grid.insertAdjacentHTML('beforeend', `
+                        <div class="vega-container bg-white border rounded-xl p-4 shadow-sm relative flex flex-col items-center justify-center w-full" style="min-height: 450px;">
+                            <div class="absolute top-2 right-2 z-10 flex gap-2">
+                                <button onclick="togglePredefinedLegend('${id}', 'vega', this)" class="text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-full shadow border border-gray-300 transition-all flex items-center gap-1">
+                                    <i class="fas fa-eye-slash"></i> <span>Hide Legend</span>
+                                </button>
+                                <button onclick="togglePredefinedLabels('${id}', 'vega', this)" class="text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-full shadow border border-gray-300 transition-all flex items-center gap-1">
+                                    <i class="fas fa-eye-slash"></i> <span>Hide Labels</span>
+                                </button>
+                            </div>
+                            <div id="${id}" class="w-full mt-8 flex justify-center"></div>
+                        </div>
+                    `);
+                    
+                    vegaEmbed(`#${id}`, spec, {actions: true}).catch(err => {
+                        console.warn("Vega Rendering Failed:", err);
+                        document.getElementById(id).innerHTML = `
+                            <div class="text-center text-gray-400 p-10">
+                                <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                                <p>AI generated an incompatible chart spec for this data.</p>
+                            </div>`;
+                    });
+                });
+
+                vizContainer.scrollIntoView({ behavior: 'smooth' });
+
+            } catch(e) {
+                console.error("Visualization Error:", e);
+                alert('Failed to generate visualizations. Please check your data or API connection.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        let plotCounter = 0;
+
+        function toggleLegend(plotDivId, engine, btn) {
+            let plotState = window.chatPlotsSpecs[plotDivId];
+            if (!plotState) return;
+            
+            plotState.showLegend = !plotState.showLegend;
+            
+            if (btn) {
+                const icon = btn.querySelector('i');
+                const span = btn.querySelector('span');
+                const isPink = btn.classList.contains('text-pink-600') || btn.classList.contains('text-pink-500');
+                const isBlack = btn.classList.contains('text-black') || btn.classList.contains('border-gray-300');
+
+                if (plotState.showLegend) {
+                    if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+                    if (span) span.innerText = 'Hide Legend';
+                    btn.className = isPink ? 'text-xs font-bold bg-pink-50 hover:bg-pink-100 text-pink-600 px-4 py-2 rounded-full shadow border border-pink-200 transition-all duration-300 flex items-center gap-2 hover:shadow-md transform hover:-translate-y-0.5' : 
+                                    isBlack ? 'text-xs font-bold bg-gray-100 hover:bg-gray-200 text-black px-4 py-2 rounded-full shadow border border-gray-300 transition-all duration-300 flex items-center gap-2 hover:shadow-md transform hover:-translate-y-0.5' :
+                                    'text-xs font-bold bg-blue-50 hover:bg-blue-100 text-blue-600 px-4 py-2 rounded-full shadow border border-blue-200 transition-all duration-300 flex items-center gap-2 hover:shadow-md transform hover:-translate-y-0.5';
+                } else {
+                    if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
+                    if (span) span.innerText = 'Show Legend';
+                    btn.className = 'text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-full shadow border border-gray-300 transition-all duration-300 flex items-center gap-2 hover:shadow-md transform hover:-translate-y-0.5';
+                }
+            }
+            
+            if (engine === 'vega') {
+                let currentSpec = JSON.parse(JSON.stringify(plotState.spec));
+                if (!plotState.showLegend) {
+                    if (!currentSpec.config) currentSpec.config = {};
+                    currentSpec.config.legend = {disable: true};
+                    recursivelyClearLegends(currentSpec);
+                }
+                vegaEmbed(`#${plotDivId}`, currentSpec, {actions: true}).catch(err => console.error("Vega Error:", err));
+            } else if (engine === 'plotly') {
+                Plotly.relayout(plotDivId, {showlegend: plotState.showLegend});
+            }
+        }
+
+        function showChatInterface() {
+            document.getElementById('chat-section').classList.remove('hidden');
+            document.getElementById('chat-input').focus();
+        }
+
+        async function sendChatMessage() {
+            const inputField = document.getElementById('chat-input');
+            const query = inputField.value.trim();
+            const chatHistory = document.getElementById('chat-history');
+
+            if (!query) return;
+
+            chatHistory.insertAdjacentHTML('beforeend', `
+                <div class="flex items-start justify-end">
+                    <div class="bg-black text-white p-3 rounded-lg rounded-tr-none" style="max-width: 80%;">
+                        ${query}
+                    </div>
+                </div>
+            `);
+            inputField.value = '';
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            const loadingId = 'loading-' + Date.now();
+            chatHistory.insertAdjacentHTML('beforeend', `
+                <div id="${loadingId}" class="flex items-start">
+                    <div class="bg-gray-100 border border-gray-300 text-black p-3 rounded-lg rounded-tl-none flex items-center gap-2" style="max-width: 80%;">
+                        <i class="fas fa-spinner fa-spin"></i> Analyzing data...
+                    </div>
+                </div>
+            `);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            try {
+                const response = await axios.post('/chat-to-data', { query: query });
+                const data = response.data;
+                document.getElementById(loadingId).remove();
+
+                if (data.error) {
+                    appendErrorMessage(data.error, chatHistory);
+                } else if (data.type === 'plot') {
+                    plotCounter++;
+                    const plotDivId = 'chat-plot-' + plotCounter;
+                    
+                    let rawAnswer = data.answer || 'Completed.';
+                    rawAnswer = rawAnswer.replace(/<br>/g, '\n');
+                    const formattedAnswer = marked.parse(rawAnswer);
+                    
+                    chatHistory.insertAdjacentHTML('beforeend', `
+                        <div class="flex items-start">
+                            <div class="bg-white border border-gray-300 p-4 rounded-lg rounded-tl-none w-full" style="max-width: 95%;">
+                                <div class="text-gray-800 mb-3 font-medium markdown-content">${formattedAnswer}</div>
+                                <div class="flex justify-end mb-3">
+                                    <button onclick="toggleLegend('${plotDivId}', '${data.engine || 'plotly'}', this)" class="text-xs font-bold bg-gray-100 hover:bg-gray-200 text-black px-4 py-2 rounded-full shadow border border-gray-300 transition-all duration-300 flex items-center gap-2 hover:shadow-md transform hover:-translate-y-0.5">
+                                        <i class="fas fa-eye-slash"></i> <span>Hide Legend</span>
+                                    </button>
+                                </div>
+                                <div id="${plotDivId}" class="w-full bg-white rounded-xl border vega-container flex items-center justify-center p-2 shadow-inner" style="min-height: 400px;"></div>
+                            </div>
+                        </div>
+                    `);
+                    
+                    if (data.engine === 'vega') {
+                        let spec = data.spec;
+                        spec.data = { values: data.vega_data };
+                        spec.width = "container";
+                        spec.height = 350;
+                        spec.autosize = {type: "fit", contains: "padding"};
+                        spec.config = getDynamicVegaConfig();
+                        
+                        window.chatPlotsSpecs[plotDivId] = { engine: 'vega', spec: JSON.parse(JSON.stringify(spec)), showLegend: true };
+                        
+                        vegaEmbed(`#${plotDivId}`, spec, {actions: true}).catch(err => {
+                            console.error("Vega Error:", err);
+                        });
+                    } else {
+                        window.chatPlotsSpecs[plotDivId] = { engine: 'plotly', showLegend: true };
+                        Plotly.newPlot(plotDivId, data.plot_json.data, data.plot_json.layout, {responsive: true});
+                    }
+                } else {
+                    let rawAnswer = data.answer || 'Completed.';
+                    rawAnswer = rawAnswer.replace(/<br>/g, '\n');
+                    const formattedHTML = marked.parse(rawAnswer);
+                    chatHistory.insertAdjacentHTML('beforeend', `
+                        <div class="flex items-start">
+                            <div class="bg-gray-100 border border-gray-300 text-black p-4 rounded-lg rounded-tl-none markdown-content" style="max-width: 80%;">
+                                ${formattedHTML}
+                            </div>
+                        </div>
+                    `);
+                }
+            } catch (error) {
+                if(document.getElementById(loadingId)) document.getElementById(loadingId).remove();
+                appendErrorMessage(error.response?.data?.error || error.message, chatHistory);
+            }
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        document.getElementById('chat-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') sendChatMessage();
+        });
+
+        let dataIntelPlotCounter = 0;
+
+        function showDataIntelChatInterface() {
+            document.getElementById('data-intel-chat-section').classList.remove('hidden');
+            document.getElementById('data-intel-chat-input').focus();
+        }
+
+        async function sendDataIntelChatMessage() {
+            const inputField = document.getElementById('data-intel-chat-input');
+            const query = inputField.value.trim();
+            const chatHistory = document.getElementById('data-intel-chat-history');
+
+            if (!query) return;
+
+            chatHistory.insertAdjacentHTML('beforeend', `
+                <div class="flex items-start justify-end">
+                    <div class="bg-black text-white p-3 rounded-lg rounded-tr-none" style="max-width: 80%;">
+                        ${query}
+                    </div>
+                </div>
+            `);
+            inputField.value = '';
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            const loadingId = 'loading-intel-' + Date.now();
+            chatHistory.insertAdjacentHTML('beforeend', `
+                <div id="${loadingId}" class="flex items-start">
+                    <div class="bg-gray-100 border border-gray-300 text-black p-3 rounded-lg rounded-tl-none flex items-center gap-2" style="max-width: 80%;">
+                        <i class="fas fa-spinner fa-spin"></i> Processing data...
+                    </div>
+                </div>
+            `);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            try {
+                const response = await axios.post('/data-intel-chat', { query: query });
+                const data = response.data;
+                document.getElementById(loadingId).remove();
+
+                if (data.error) {
+                    appendErrorMessage(data.error, chatHistory);
+                } else if (data.type === 'plot') {
+                    dataIntelPlotCounter++;
+                    const plotDivId = 'data-intel-chat-plot-' + dataIntelPlotCounter;
+                    
+                    let rawAnswer = data.answer || '';
+                    rawAnswer = rawAnswer.replace(/<br>/g, '\n');
+                    const formattedAnswer = rawAnswer ? marked.parse(rawAnswer) : '';
+                    
+                    chatHistory.insertAdjacentHTML('beforeend', `
+                        <div class="flex items-start">
+                            <div class="bg-white border border-gray-300 p-4 rounded-lg rounded-tl-none w-full" style="max-width: 95%;">
+                                <div class="text-gray-800 mb-3 font-medium markdown-content">${formattedAnswer}</div>
+                                <div class="flex justify-end mb-3">
+                                    <button onclick="toggleLegend('${plotDivId}', 'plotly', this)" class="text-xs font-bold bg-gray-100 hover:bg-gray-200 text-black px-4 py-2 rounded-full shadow border border-gray-300 transition-all duration-300 flex items-center gap-2 hover:shadow-md transform hover:-translate-y-0.5">
+                                        <i class="fas fa-eye-slash"></i> <span>Hide Legend</span>
+                                    </button>
+                                </div>
+                                <div id="${plotDivId}" class="w-full bg-white rounded-xl border p-2 shadow-inner" style="min-height: 400px;"></div>
+                            </div>
+                        </div>
+                    `);
+                    window.chatPlotsSpecs[plotDivId] = { engine: 'plotly', showLegend: true };
+                    Plotly.newPlot(plotDivId, data.plot_json.data, data.plot_json.layout, {responsive: true});
+                } else {
+                    let rawAnswer = data.answer || 'Completed.';
+                    rawAnswer = rawAnswer.replace(/<br>/g, '\n');
+                    const formattedHTML = marked.parse(rawAnswer);
+                    chatHistory.insertAdjacentHTML('beforeend', `
+                        <div class="flex items-start">
+                            <div class="bg-gray-100 text-black border border-gray-300 p-4 rounded-lg rounded-tl-none markdown-content" style="max-width: 80%;">
+                                ${formattedHTML}
+                            </div>
+                        </div>
+                    `);
+                }
+            } catch (error) {
+                if(document.getElementById(loadingId)) document.getElementById(loadingId).remove();
+                appendErrorMessage(error.response?.data?.error || error.message, chatHistory);
+            }
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function appendErrorMessage(message, containerElement) {
+            containerElement.insertAdjacentHTML('beforeend', `
+                <div class="flex items-start">
+                    <div class="bg-red-100 text-red-800 p-3 rounded-lg rounded-tl-none" style="max-width: 80%;">
+                        <i class="fas fa-exclamation-triangle mr-2"></i> ${message}
+                    </div>
+                </div>
+            `);
+        }
+
+        document.getElementById('data-intel-chat-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') sendDataIntelChatMessage();
+        });
+
+
+        async function performEDA() {
+            showLoading(true);
+            try {
+                const res = await axios.post('/analyze');
+                const data = res.data;
+                const formattedMarkdown = marked.parse(data.groq_markdown_report || 'No AI report generated.');
+                const quality = data.ai_analysis?.data_quality || { summary_score: 0, completeness: { overall_score: 0 }, duplicates: { rows: 0 } };
+                const score = parseFloat(quality.summary_score).toFixed(1);
+                
+                const outliers = data.ai_analysis?.outliers || {};
+                const outlierHtml = Object.entries(outliers).slice(0, 5).map(([col, info]) => `
+                    <li class="flex justify-between items-center bg-red-50 p-3 rounded-lg border border-red-100">
+                        <span class="font-semibold text-red-800">${col}</span>
+                        <span class="text-sm font-bold bg-red-200 text-red-800 px-2 py-1 rounded">${info.outlier_count} outliers (${info.outlier_percentage.toFixed(1)}%)</span>
+                    </li>
+                `).join('') || '<li class="text-gray-500">No significant outliers detected.</li>';
+                
+                const correlations = data.correlation_analysis?.high_correlations || [];
+                const corrHtml = correlations.slice(0, 5).map(corr => `
+                    <li class="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <span class="font-semibold text-blue-800">${corr.var1} ↔ ${corr.var2}</span>
+                        <span class="text-sm font-bold bg-blue-200 text-blue-800 px-2 py-1 rounded">${corr.correlation.toFixed(2)}</span>
+                    </li>
+                `).join('') || '<li class="text-gray-500">No highly correlated features detected.</li>';
+
+                let html = `
+                    <div class="grid md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl shadow-md border border-green-200 hover:shadow-lg transition-shadow">
+                            <h3 class="font-bold text-green-800 mb-2 uppercase text-xs tracking-wider">Data Quality Score</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-green-600">${score}<span class="text-lg">/100</span></span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl shadow-md border border-blue-200 hover:shadow-lg transition-shadow">
+                            <h3 class="font-bold text-blue-800 mb-2 uppercase text-xs tracking-wider">Completeness</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-blue-600">${parseFloat(quality.completeness.overall_score).toFixed(1)}%</span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl shadow-md border border-purple-200 hover:shadow-lg transition-shadow">
+                            <h3 class="font-bold text-purple-800 mb-2 uppercase text-xs tracking-wider">Duplicates Found</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-purple-600">${quality.duplicates.rows}</span>
+                                <span class="text-sm font-bold text-purple-500 pb-1">rows</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-8 mb-8">
+                        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                            <h3 class="text-xl font-bold mb-4 flex items-center text-gray-800 border-b pb-2"><i class="fas fa-robot mr-3 text-indigo-500"></i> AI Executive Report</h3>
+                            <div class="markdown-content text-gray-700 max-h-[500px] overflow-y-auto pr-4">
+                                ${formattedMarkdown}
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                                <h3 class="text-xl font-bold mb-4 flex items-center text-gray-800"><i class="fas fa-exclamation-circle mr-3 text-red-500"></i> Top Outliers</h3>
+                                <ul class="space-y-3">
+                                    ${outlierHtml}
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                                <h3 class="text-xl font-bold mb-4 flex items-center text-gray-800"><i class="fas fa-link mr-3 text-blue-500"></i> High Correlations (>0.7)</h3>
+                                <ul class="space-y-3">
+                                    ${corrHtml}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('eda-content').innerHTML = html;
+                document.getElementById('eda-results').classList.remove('hidden');
+                
+            } catch(e) { 
+                alert('Exploratory Data Analysis Error. Please check backend logs.'); 
+                console.error(e);
+            } finally { 
+                showLoading(false); 
+            }
+        }
+
+        async function performAdvancedAnalysis() {
+            showLoading(true);
+            try {
+                const res = await axios.post('/advanced-analysis');
+                const data = res.data;
+                const formattedMarkdown = marked.parse(data.groq_advanced_report || 'No AI deep-dive report was generated.');
+                const rowCount = data.analysis_results?.basic_info?.rows || 0;
+                const colCount = data.analysis_results?.basic_info?.columns || 0;
+                const outlierCount = Object.keys(data.analysis_results?.outliers || {}).length;
+
+                let html = `
+                    <div class="grid md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 rounded-xl shadow-md border border-indigo-200 hover:shadow-lg transition-shadow">
+                            <h3 class="font-bold text-indigo-800 mb-2 uppercase text-xs tracking-wider">Dataset Shape</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-indigo-600">${rowCount.toLocaleString()}</span>
+                                <span class="text-sm font-bold text-indigo-500 pb-1">rows</span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl shadow-md border border-purple-200 hover:shadow-lg transition-shadow">
+                            <h3 class="font-bold text-purple-800 mb-2 uppercase text-xs tracking-wider">Feature Count</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-purple-600">${colCount}</span>
+                                <span class="text-sm font-bold text-purple-500 pb-1">columns</span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-pink-50 to-pink-100 p-6 rounded-xl shadow-md border border-pink-200 hover:shadow-lg transition-shadow">
+                            <h3 class="font-bold text-pink-800 mb-2 uppercase text-xs tracking-wider">Features w/ Outliers</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-pink-600">${outlierCount}</span>
+                                <span class="text-sm font-bold text-pink-500 pb-1">detected</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
+                        <h3 class="text-2xl font-bold mb-6 flex items-center text-gray-800 border-b pb-4">
+                            <i class="fas fa-brain mr-3 text-indigo-600"></i> AI Deep-Dive Diagnostic Report
+                        </h3>
+                        <div class="markdown-content text-gray-800 text-lg leading-relaxed">
+                            ${formattedMarkdown}
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('advanced-analysis-content').innerHTML = html;
+                document.getElementById('advanced-analysis-results').classList.remove('hidden');
+            } catch(e) { 
+                alert('Advanced Analysis Error. Check backend logs.'); 
+                console.error(e);
+            }
+            finally { showLoading(false); }
+        }
+
+        async function generateWorkflow() {
+            showLoading(true);
+            try {
+                const res = await axios.post('/generate-workflow');
+                const workflowArr = res.data.workflow;
+                
+                if (!Array.isArray(workflowArr) || workflowArr[0]?.error) {
+                    const errMsg = workflowArr[0]?.error || "An unknown error occurred.";
+                    document.getElementById('workflow-content').innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-lg shadow border border-red-200"><i class="fas fa-exclamation-triangle mr-2"></i>${errMsg}</div>`;
+                } else {
+                    let html = '<div class="relative w-full max-w-5xl mx-auto mt-4 pb-8">';
+                    html += '<div class="timeline-line hidden md:block"></div>';
+                    
+                    workflowArr.forEach((step, index) => {
+                        let compColor = step.complexity === 'Beginner' ? 'bg-green-100 text-green-800' : 
+                                       (step.complexity === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
+                                       
+                        const escapedCode = step.python_code ? step.python_code.replace(/`/g, '\\`').replace(/"/g, '&quot;') : '';
+                        
+                        html += `
+                        <div class="relative md:pl-16 mb-10 w-full group">
+                            <div class="hidden md:flex absolute left-[0px] top-0 w-10 h-10 rounded-full bg-black text-white font-bold items-center justify-center border-4 border-white shadow-lg z-10 group-hover:bg-gray-800 transition-colors">
+                                ${index + 1}
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                                <div class="bg-gray-50 border-b border-gray-100 px-6 py-4">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h3 class="text-xl font-bold text-gray-800 flex items-center">
+                                            <span class="md:hidden inline-flex w-6 h-6 rounded-full bg-black text-white text-xs items-center justify-center mr-2">${index + 1}</span>
+                                            ${step.step_name}
+                                        </h3>
+                                        <span class="text-xs font-semibold px-2 py-1 bg-gray-200 text-gray-700 rounded-lg shadow-sm">${step.phase}</span>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <span class="text-xs font-bold px-2 py-1 rounded-md ${compColor}">${step.complexity}</span>
+                                        ${step.estimated_time ? `<span class="text-xs font-bold px-2 py-1 rounded-md bg-blue-50 text-blue-700"><i class="far fa-clock mr-1"></i>${step.estimated_time}</span>` : ''}
+                                    </div>
+                                </div>
+                                
+                                <div class="px-6 py-5">
+                                    <p class="text-gray-700 mb-5 leading-relaxed">${step.description}</p>
+                                    
+                                    ${step.risk_warnings ? `
+                                    <div class="mb-5 bg-orange-50 border-l-4 border-orange-400 p-4 rounded text-sm text-orange-900 shadow-sm">
+                                        <strong class="flex items-center text-orange-700 mb-1"><i class="fas fa-exclamation-triangle mr-2"></i> Caution</strong> 
+                                        ${step.risk_warnings}
+                                    </div>` : ''}
+
+                                    ${step.python_code ? `
+                                    <div class="relative bg-gray-900 rounded-lg p-4 overflow-hidden shadow-inner mt-2">
+                                        <div class="absolute top-2 right-2 z-10">
+                                            <button onclick="navigator.clipboard.writeText(\`${escapedCode}\`); this.innerHTML='<i class=\\'fas fa-check\\'></i> Copied!';" class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded transition-colors shadow">
+                                                <i class="far fa-copy"></i> Copy
+                                            </button>
+                                        </div>
+                                        <pre class="text-sm text-green-400 font-mono mt-4 overflow-x-auto whitespace-pre-wrap leading-relaxed"><code>${step.python_code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+                                    </div>` : ''}
+                                    
+                                    ${step.dependencies && step.dependencies.length > 0 ? `
+                                    <div class="mt-4 pt-4 border-t border-gray-100 flex items-center text-xs text-gray-500 font-semibold">
+                                        <i class="fas fa-box-open mr-2 text-gray-400"></i> Packages: 
+                                        <span class="ml-2 text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded">${step.dependencies.join('</span> <span class="ml-1 text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded">')}</span>
+                                    </div>` : ''}
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                    document.getElementById('workflow-content').innerHTML = html;
+                }
+                document.getElementById('workflow-section').classList.remove('hidden');
+            } catch(e) { 
+                alert('An error occurred generating the workflow.'); 
+                console.error(e);
+            }
+            finally { showLoading(false); }
+        }
+
+        async function buildMLModel() {
+            const tc = document.getElementById('targetColumn').value;
+            if(!tc) return alert("Select target column");
+            showLoading(true);
+            try {
+                const res = await axios.post('/predict', {target_column: tc, model_type: document.getElementById('modelType').value});
+                const data = res.data;
+                
+                if (data.error) {
+                    alert('ML Error: ' + data.error);
+                    showLoading(false);
+                    return;
+                }
+
+                const formattedMarkdown = marked.parse(data.groq_ml_report || 'No AI report generated.');
+                
+                let shapHtml = '';
+                if (data.models['Random Forest'] && data.models['Random Forest'].shap_importance) {
+                    let shapData = data.models['Random Forest'].shap_importance;
+                    shapHtml = `
+                    <div class="bg-indigo-50 p-6 rounded-xl shadow-inner border border-indigo-100 mt-6">
+                        <h4 class="text-lg font-bold mb-4 text-indigo-800"><i class="fas fa-project-diagram mr-2"></i> Explainable AI (SHAP Feature Importance)</h4>
+                        <ul class="space-y-2">
+                            ${Object.entries(shapData).map(([feat, val]) => `
+                            <li class="flex items-center justify-between">
+                                <span class="font-semibold text-gray-700">${feat}</span>
+                                <span class="text-sm bg-indigo-200 text-indigo-800 px-2 py-1 rounded-full">${Number(val).toFixed(4)}</span>
+                            </li>`).join('')}
+                        </ul>
+                    </div>`;
+                }
+                
+                let html = `
+                    <div class="grid md:grid-cols-3 gap-6 mb-8 mt-4">
+                        <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl shadow-md border border-purple-200">
+                            <h3 class="font-bold text-purple-800 mb-2 uppercase text-xs tracking-wider">Problem Type</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-2xl font-black text-purple-600 capitalize">${data.problem_type}</span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl shadow-md border border-blue-200">
+                            <h3 class="font-bold text-blue-800 mb-2 uppercase text-xs tracking-wider">Features Used</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-blue-600">${data.feature_count}</span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl shadow-md border border-green-200">
+                            <h3 class="font-bold text-green-800 mb-2 uppercase text-xs tracking-wider">Training Samples</h3>
+                            <div class="flex items-end gap-2">
+                                <span class="text-4xl font-black text-green-600">${Math.round(data.training_samples).toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-200 mb-8">
+                        <h3 class="text-2xl font-bold mb-6 flex items-center text-gray-800 border-b pb-4">
+                            <i class="fas fa-robot mr-3 text-purple-600"></i> AI Model Evaluation Report
+                        </h3>
+                        <div class="markdown-content text-gray-800 text-lg leading-relaxed">
+                            ${formattedMarkdown}
+                        </div>
+                        ${shapHtml}
+                    </div>
+                    
+                    <div class="bg-gray-50 p-6 rounded-xl shadow-md border border-gray-200">
+                        <h3 class="text-xl font-bold mb-4 flex items-center text-gray-800"><i class="fas fa-code mr-3 text-gray-500"></i> Raw Model Metrics</h3>
+                        <pre class="text-sm p-4 bg-gray-900 text-green-400 rounded-lg overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner"><code>${JSON.stringify(data.models, null, 2)}</code></pre>
+                    </div>
+                `;
+                
+                document.getElementById('ml-results').innerHTML = html;
+                document.getElementById('ml-results').classList.remove('hidden');
+
+                let topFeatures = [];
+                if (data.models['Random Forest'] && data.models['Random Forest'].feature_importance) {
+                    topFeatures = Object.keys(data.models['Random Forest'].feature_importance).slice(0, 5);
+                } else {
+                    topFeatures = data.feature_names || [];
+                }
+
+                if (topFeatures.length > 0) {
+                    document.getElementById('whatif-section').classList.remove('hidden');
+                    let formHtml = '';
+                    topFeatures.forEach(feat => {
+                        formHtml += `
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2">${feat}</label>
+                            <input type="number" step="any" class="whatif-input w-full px-4 py-2 border rounded-lg focus:ring focus:ring-blue-300" data-feat="${feat}" value="0">
+                        </div>`;
+                    });
+                    document.getElementById('whatif-form').innerHTML = formHtml;
+                    document.getElementById('whatif-result').innerText = ''; 
+                }
+
+            } catch(e) { 
+                alert('ML Error: ' + (e.response?.data?.error || e.message)); 
+            }
+            finally { showLoading(false); }
+        }
+        
+        async function exportReport() {
+            showLoading(true);
+            try {
+                const res = await axios.post('/export-enhanced-report', {}, {responseType: 'blob'});
+                const url = window.URL.createObjectURL(new Blob([res.data]));
+                const link = document.createElement('a'); link.href = url; link.download = 'report.pdf'; link.click();
+            } catch(e) { alert("Export error"); }
+            finally { showLoading(false); }
+        }
+    </script>
+</body>
+</html>

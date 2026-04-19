@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #1a1a1a;
+    --surface: #242424;
+    --surface2: #2e2e2e;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.05);
+    --text: #f0f0f0;
+    --text2: #a0a0a0;
+    --text3: #666;
+    --green: #1DB954;
+    --green2: rgba(29,185,84,0.15);
+    --blue: #4A9EE8;
+    --blue2: rgba(74,158,232,0.15);
+    --blue3: rgba(74,158,232,0.08);
+    --orange: #E8874A;
+    --gold: #1DB954;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    padding: 24px;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    animation: fadeUp 0.6s ease both;
+  }
+  .header-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--green);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .header-title {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .header-title span { color: var(--green); }
+  .header-right {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    text-align: right;
+    line-height: 1.8;
+  }
+
+  /* ─── FILTER BAR ─────────────────────────────────────── */
+  .filter-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.6s ease 0.05s both;
+  }
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 130px;
+  }
+  .filter-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+  .filter-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 6px 10px;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 26px;
+    transition: border-color 0.2s, background-color 0.2s;
+    outline: none;
+  }
+  .filter-select:hover, .filter-select:focus {
+    border-color: var(--blue);
+    background-color: rgba(74,158,232,0.08);
+  }
+  .filter-divider {
+    width: 1px;
+    height: 40px;
+    background: var(--border);
+    align-self: center;
+    flex-shrink: 0;
+  }
+  .filter-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex: 1;
+    align-items: center;
+  }
+  .filter-chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.18s;
+    color: var(--text2);
+    background: transparent;
+    user-select: none;
+  }
+  .filter-chip:hover { border-color: var(--blue); color: var(--blue); }
+  .filter-chip.active-green { border-color: var(--green); color: var(--green); background: rgba(29,185,84,0.1); }
+  .filter-chip.active-blue  { border-color: var(--blue);  color: var(--blue);  background: rgba(74,158,232,0.1); }
+  .filter-reset {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    align-self: flex-end;
+  }
+  .filter-reset:hover { border-color: var(--green); color: var(--green); }
+
+  /* ACTIVE FILTER PILLS */
+  .active-filters {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    min-height: 0;
+    animation: fadeUp 0.3s ease both;
+  }
+  .active-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    padding: 3px 8px 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--green);
+    color: var(--green);
+    background: rgba(29,185,84,0.08);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    letter-spacing: 0.04em;
+  }
+  .active-pill button {
+    background: none; border: none; color: var(--green); cursor: pointer;
+    font-size: 12px; line-height: 1; padding: 0; opacity: 0.7;
+    transition: opacity 0.15s;
+  }
+  .active-pill button:hover { opacity: 1; }
+
+  /* KPI GRID */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.6s ease both;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .kpi:nth-child(1) { animation-delay: 0.1s; }
+  .kpi:nth-child(2) { animation-delay: 0.15s; }
+  .kpi:nth-child(3) { animation-delay: 0.2s; }
+  .kpi:nth-child(4) { animation-delay: 0.25s; }
+  .kpi:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.15); }
+  .kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--green), var(--blue));
+    opacity: 0.6;
+  }
+  .kpi-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+  .kpi-val {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-bottom: 4px;
+    transition: color 0.3s;
+  }
+  .kpi-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+  }
+
+  /* MAIN GRID */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    animation: fadeUp 0.6s ease both;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: rgba(255,255,255,0.13); }
+  .card:nth-child(1) { animation-delay: 0.3s; }
+  .card:nth-child(2) { animation-delay: 0.35s; }
+
+  .card-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title::before {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 12px;
+    background: linear-gradient(180deg, var(--green), var(--blue));
+    border-radius: 2px;
+  }
+
+  /* ARTIST BARS */
+  .artist-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 9px;
+    transition: opacity 0.3s;
+  }
+  .artist-row.hidden { opacity: 0.15; }
+  .artist-name {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text);
+    width: 120px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .artist-track {
+    flex: 1;
+    height: 5px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .artist-fill {
+    height: 100%;
+    border-radius: 3px;
+    width: 0;
+    transition: width 1s cubic-bezier(0.4,0,0.2,1);
+  }
+  .artist-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    width: 34px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* SONG BARS */
+  .song-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    transition: opacity 0.3s;
+  }
+  .song-row.hidden { opacity: 0.15; }
+  .song-rank {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    width: 14px;
+    flex-shrink: 0;
+    text-align: right;
+  }
+  .song-rank.top { color: var(--gold); font-weight: 500; }
+  .song-info { flex: 1; min-width: 0; }
+  .song-name {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .song-artist {
+    font-family: 'DM Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .song-track {
+    width: 80px;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .song-fill {
+    height: 100%;
+    border-radius: 2px;
+    width: 0;
+    transition: width 1s cubic-bezier(0.4,0,0.2,1);
+  }
+  .song-days {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    width: 32px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* TREND CARD */
+  .trend-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 14px;
+    animation: fadeUp 0.6s ease 0.4s both;
+  }
+  .trend-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .legend {
+    display: flex;
+    gap: 16px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+  }
+  .legend-dot {
+    width: 20px;
+    height: 2px;
+    border-radius: 2px;
+  }
+  .legend-dot.dashed {
+    background: repeating-linear-gradient(to right, var(--green) 0, var(--green) 4px, transparent 4px, transparent 7px);
+  }
+
+  /* BOTTOM GRID */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .bottom-grid .card { animation-delay: 0.45s; }
+  .bottom-grid .card:nth-child(2) { animation-delay: 0.5s; }
+
+  /* DONUT — fully interactive */
+  .donut-wrap {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .donut-canvas-wrap {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .donut-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    transition: all 0.25s;
+  }
+  .donut-center-val {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    transition: color 0.25s;
+  }
+  .donut-center-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: color 0.25s;
+  }
+  .donut-legend { flex: 1; }
+  .donut-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 4px 6px;
+    transition: background 0.18s;
+  }
+  .donut-legend-item:hover { background: rgba(255,255,255,0.04); }
+  .donut-legend-item.active { background: rgba(74,158,232,0.08); }
+  .donut-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+  .donut-legend-item:hover .donut-dot, .donut-legend-item.active .donut-dot { transform: scale(1.3); }
+  .donut-legend-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+  }
+  .donut-legend-pct {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+  }
+  .donut-legend-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--text3);
+    display: none;
+  }
+  .donut-legend-item.active .donut-legend-count { display: block; }
+  .donut-tooltip {
+    display: none;
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--text2);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  canvas { display: block; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+  <div class="header-title">Spotify <span>Global</span> Top 50 Dashboard</div>
+  </div>
+  <div class="header-right">
+    
+  </div>
+</div>
+
+<!-- ─── FILTER BAR ─────────────────────────────────── -->
+<div class="filter-bar">
+  <div class="filter-group">
+    <span class="filter-label">Time Period</span>
+    <select class="filter-select" id="filterPeriod" onchange="applyFilters()">
+      <option value="all">All Time</option>
+      <option value="2023">2023 Only</option>
+      <option value="2024">2024 Only</option>
+      <option value="h1-2024">Jan–Jun 2024</option>
+      <option value="h2-2024">Jul–Nov 2024</option>
+    </select>
+  </div>
+
+  <div class="filter-divider"></div>
+
+  <div class="filter-group">
+    <span class="filter-label">Min Chart Days</span>
+    <select class="filter-select" id="filterDays" onchange="applyFilters()">
+      <option value="0">Any</option>
+      <option value="300">300+ days</option>
+      <option value="400">400+ days</option>
+      <option value="500">500+ days</option>
+    </select>
+  </div>
+
+  <div class="filter-divider"></div>
+
+  <div class="filter-group">
+    <span class="filter-label">Artist Tier</span>
+    <select class="filter-select" id="filterTier" onchange="applyFilters()">
+      <option value="all">All Artists</option>
+      <option value="top3">Top 3 Only</option>
+      <option value="top5">Top 5 Only</option>
+      <option value="500plus">500+ Appearances</option>
+    </select>
+  </div>
+
+  <div class="filter-divider"></div>
+
+  <div class="filter-group">
+    <span class="filter-label">Release Type</span>
+    <div class="filter-chips">
+      <span class="filter-chip active-green" data-type="album" onclick="toggleChip(this,'album')">Album</span>
+      <span class="filter-chip active-blue"  data-type="single" onclick="toggleChip(this,'single')">Single</span>
+      <span class="filter-chip"              data-type="compilation" onclick="toggleChip(this,'compilation')">Compilation</span>
+    </div>
+  </div>
+
+  <button class="filter-reset" onclick="resetFilters()">↺ Reset</button>
+</div>
+
+<!-- Active filter pills -->
+<div class="active-filters" id="activePills"></div>
+
+<!-- KPIs -->
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">Unique Songs</div>
+    <div class="kpi-val" id="kpiSongs" data-count="794">794</div>
+    <div class="kpi-sub">May 2023 – Nov 2024</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Unique Artists</div>
+    <div class="kpi-val" id="kpiArtists" data-count="343">343</div>
+    <div class="kpi-sub">across 556 daily charts</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Avg Popularity</div>
+    <div class="kpi-val" id="kpiPop" data-count="89.6">89.6</div>
+    <div class="kpi-sub">out of 100</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Avg Song Length</div>
+    <div class="kpi-val" id="kpiLen">3:17</div>
+    <div class="kpi-sub">min : sec</div>
+  </div>
+</div>
+
+<!-- ARTIST + SONGS -->
+<div class="main-grid">
+  <div class="card">
+    <div class="card-title">Most chart appearances — Artists</div>
+    <div id="artist-bars"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Longest chart runs — Songs</div>
+    <div id="song-bars"></div>
+  </div>
+</div>
+
+<!-- TREND -->
+<div class="trend-card">
+  <div class="trend-header">
+    <div class="card-title" style="margin-bottom:0;">Monthly avg popularity &amp; explicit content %</div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--blue);"></div>Avg popularity</div>
+      <div class="legend-item"><div class="legend-dot dashed"></div>Explicit %</div>
+    </div>
+  </div>
+  <div style="position:relative;width:100%;height:200px;">
+    <canvas id="trendChart"></canvas>
+  </div>
+</div>
+
+<!-- BOTTOM -->
+<div class="bottom-grid">
+  <div class="card">
+    <div class="card-title">Popularity score distribution</div>
+    <div style="position:relative;width:100%;height:160px;">
+      <canvas id="popDist"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Release format breakdown</div>
+    <div class="donut-wrap">
+      <div class="donut-canvas-wrap">
+        <canvas id="albumPie" width="140" height="140"></canvas>
+        <div class="donut-center" id="donutCenter">
+          <div class="donut-center-val" id="donutVal">62%</div>
+          <div class="donut-center-label" id="donutLabel">Albums</div>
+        </div>
+      </div>
+      <div class="donut-legend" id="donutLegend">
+        <div class="donut-legend-item active" data-idx="0" onclick="selectSlice(0)">
+          <div class="donut-dot" style="background:#4A9EE8;"></div>
+          <span class="donut-legend-label">Album</span>
+          <span class="donut-legend-pct">62%</span>
+          <span class="donut-legend-count">17,261</span>
+        </div>
+        <div class="donut-legend-item" data-idx="1" onclick="selectSlice(1)">
+          <div class="donut-dot" style="background:#1DB954;"></div>
+          <span class="donut-legend-label">Single</span>
+          <span class="donut-legend-pct">38%</span>
+          <span class="donut-legend-count">10,496</span>
+        </div>
+        <div class="donut-legend-item" data-idx="2" onclick="selectSlice(2)">
+          <div class="donut-dot" style="background:rgba(74,158,232,0.35);"></div>
+          <span class="donut-legend-label">Compilation</span>
+          <span class="donut-legend-pct">0.2%</span>
+          <span class="donut-legend-count">43</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────
+const allArtists = [
+  {name:'Taylor Swift',count:1871},{name:'Billie Eilish',count:860},
+  {name:'Sabrina Carpenter',count:736},{name:'The Weeknd',count:674},
+  {name:'Arctic Monkeys',count:548},{name:'Bad Bunny',count:537},
+  {name:'KAROL G',count:527},{name:'Ariana Grande',count:487},
+  {name:'SZA',count:484},{name:'Travis Scott',count:473}
+];
+const allSongs = [
+  {song:'I Wanna Be Yours',artist:'Arctic Monkeys',days:548,year:2023},
+  {song:'Cruel Summer',artist:'Taylor Swift',days:517,year:2023},
+  {song:'As It Was',artist:'Harry Styles',days:375,year:2023},
+  {song:'The Night We Met',artist:'Lord Huron',days:349,year:2023},
+  {song:'Lose Control',artist:'Teddy Swims',days:324,year:2024},
+  {song:'One Of The Girls',artist:'The Weeknd & JENNIE',days:320,year:2024},
+  {song:'Beautiful Things',artist:'Benson Boone',days:307,year:2024},
+  {song:'Starboy',artist:'The Weeknd',days:296,year:2023},
+  {song:'LUNA',artist:'Feid',days:289,year:2024},
+  {song:'Daylight',artist:'David Kushner',days:280,year:2024}
+];
+const months = ["May'23",'Jun','Jul','Aug','Sep','Oct','Nov','Dec',"Jan'24",'Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov'];
+const avgPop = [90.1,91.5,89.7,90.9,90.1,85.9,90.4,90.4,92.5,91.7,89.8,89.1,90.5,87.0,89.7,88.8,89.6,87.9,87.2];
+const expPct = [31.7,37.1,46.3,48.1,47.4,52.5,43.5,30.3,45.7,45.7,46.5,42.8,35.2,31.1,35.6,27.3,32.4,40.1,39.7];
+
+// Filter state
+let state = {
+  period: 'all',
+  minDays: 0,
+  tier: 'all',
+  types: new Set(['album','single','compilation'])
+};
+
+// ─── FILTER LOGIC ────────────────────────────────────────
+function getFilteredArtists() {
+  let data = [...allArtists];
+  if (state.tier === 'top3') data = data.slice(0, 3);
+  else if (state.tier === 'top5') data = data.slice(0, 5);
+  else if (state.tier === '500plus') data = data.filter(a => a.count >= 500);
+  return data;
+}
+
+function getFilteredSongs() {
+  let data = [...allSongs];
+  if (state.minDays > 0) data = data.filter(s => s.days >= state.minDays);
+  if (state.period === '2023') data = data.filter(s => s.year === 2023);
+  else if (state.period === '2024' || state.period === 'h1-2024' || state.period === 'h2-2024') data = data.filter(s => s.year === 2024);
+  return data;
+}
+
+function getFilteredTrend() {
+  let sliceMonths = months, slicePop = avgPop, sliceExp = expPct;
+  if (state.period === '2023') {
+    sliceMonths = months.slice(0, 8); slicePop = avgPop.slice(0, 8); sliceExp = expPct.slice(0, 8);
+  } else if (state.period === '2024') {
+    sliceMonths = months.slice(8); slicePop = avgPop.slice(8); sliceExp = expPct.slice(8);
+  } else if (state.period === 'h1-2024') {
+    sliceMonths = months.slice(8, 14); slicePop = avgPop.slice(8, 14); sliceExp = expPct.slice(8, 14);
+  } else if (state.period === 'h2-2024') {
+    sliceMonths = months.slice(14); slicePop = avgPop.slice(14); sliceExp = expPct.slice(14);
+  }
+  return { sliceMonths, slicePop, sliceExp };
+}
+
+// ─── APPLY FILTERS ───────────────────────────────────────
+function applyFilters() {
+  state.period = document.getElementById('filterPeriod').value;
+  state.minDays = parseInt(document.getElementById('filterDays').value);
+  state.tier    = document.getElementById('filterTier').value;
+
+  renderActivePills();
+  renderArtistBars();
+  renderSongBars();
+  updateTrendChart();
+  updateKPIs();
+  updateDonutForTypes();
+}
+
+function toggleChip(el, type) {
+  if (state.types.has(type)) {
+    if (state.types.size === 1) return; // keep at least one
+    state.types.delete(type);
+    el.classList.remove('active-green','active-blue');
+  } else {
+    state.types.add(type);
+    if (type === 'album') el.classList.add('active-blue');
+    else el.classList.add('active-green');
+  }
+  updateDonutForTypes();
+  renderActivePills();
+}
+
+function resetFilters() {
+  document.getElementById('filterPeriod').value = 'all';
+  document.getElementById('filterDays').value   = '0';
+  document.getElementById('filterTier').value   = 'all';
+  state = { period:'all', minDays:0, tier:'all', types: new Set(['album','single','compilation']) };
+  // reset chips
+  document.querySelectorAll('.filter-chip').forEach(c => {
+    c.classList.remove('active-green','active-blue');
+    if (c.dataset.type === 'album')   c.classList.add('active-blue');
+    if (c.dataset.type === 'single')  c.classList.add('active-green');
+  });
+  applyFilters();
+}
+
+// ─── ACTIVE PILLS ────────────────────────────────────────
+function renderActivePills() {
+  const wrap = document.getElementById('activePills');
+  wrap.innerHTML = '';
+  const labels = {
+    period: { '2023':'2023 Only','2024':'2024 Only','h1-2024':'Jan–Jun 2024','h2-2024':'Jul–Nov 2024' },
+    minDays: { 300:'300+ days',400:'400+ days',500:'500+ days' },
+    tier: { top3:'Top 3 Artists',top5:'Top 5 Artists','500plus':'500+ Appearances' }
+  };
+  if (labels.period[state.period]) pill(wrap, labels.period[state.period], () => { document.getElementById('filterPeriod').value='all'; state.period='all'; applyFilters(); });
+  if (labels.minDays[state.minDays]) pill(wrap, labels.minDays[state.minDays], () => { document.getElementById('filterDays').value='0'; state.minDays=0; applyFilters(); });
+  if (labels.tier[state.tier]) pill(wrap, labels.tier[state.tier], () => { document.getElementById('filterTier').value='all'; state.tier='all'; applyFilters(); });
+  if (!state.types.has('compilation')) pill(wrap, 'No Compilations', () => { state.types.add('compilation'); document.querySelector('[data-type="compilation"]').classList.add('active-green'); updateDonutForTypes(); renderActivePills(); });
+}
+function pill(wrap, text, onClose) {
+  const d = document.createElement('div');
+  d.className = 'active-pill';
+  d.innerHTML = `${text}<button onclick="">✕</button>`;
+  d.querySelector('button').addEventListener('click', onClose);
+  wrap.appendChild(d);
+}
+
+// ─── KPI UPDATES ─────────────────────────────────────────
+function updateKPIs() {
+  const songs   = getFilteredSongs();
+  const artists = getFilteredArtists();
+  const { slicePop } = getFilteredTrend();
+  const avgPopVal = (slicePop.reduce((a,b) => a+b, 0) / slicePop.length).toFixed(1);
+
+  animateNum(document.getElementById('kpiSongs'),   794,          songs.length,    0);
+  animateNum(document.getElementById('kpiArtists'), 343,          artists.length,  0);
+  animateNum(document.getElementById('kpiPop'),     89.6,         parseFloat(avgPopVal), 1);
+}
+function animateNum(el, from, to, dec) {
+  const dur = 600, start = performance.now();
+  function step(now) {
+    const t = Math.min((now-start)/dur, 1);
+    const v = from + (to - from) * (1 - Math.pow(1-t,3));
+    el.textContent = v.toFixed(dec);
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = to.toFixed(dec);
+  }
+  requestAnimationFrame(step);
+}
+
+// ─── ARTIST BARS ─────────────────────────────────────────
+function renderArtistBars() {
+  const filtered = getFilteredArtists();
+  const filteredNames = new Set(filtered.map(a => a.name));
+  const maxA = allArtists[0].count;
+
+  document.querySelectorAll('.artist-row').forEach(row => {
+    const name = row.querySelector('.artist-name').textContent;
+    row.classList.toggle('hidden', !filteredNames.has(name));
+  });
+}
+
+// ─── SONG BARS ────────────────────────────────────────────
+function renderSongBars() {
+  const filtered = getFilteredSongs();
+  const filteredSongs = new Set(filtered.map(s => s.song));
+
+  document.querySelectorAll('.song-row').forEach(row => {
+    const name = row.querySelector('.song-name').textContent;
+    row.classList.toggle('hidden', !filteredSongs.has(name));
+  });
+}
+
+// ─── INITIAL BAR BUILD ───────────────────────────────────
+function buildBars() {
+  const maxA = allArtists[0].count;
+  const aWrap = document.getElementById('artist-bars');
+  allArtists.forEach((a, i) => {
+    const pct = Math.round(a.count / maxA * 100);
+    const color = i === 0 ? '#1DB954' : i < 3 ? '#4A9EE8' : 'rgba(74,158,232,0.3)';
+    const div = document.createElement('div');
+    div.className = 'artist-row';
+    div.innerHTML = `
+      <span class="artist-name" title="${a.name}">${a.name}</span>
+      <div class="artist-track"><div class="artist-fill" data-w="${pct}" style="background:${color};"></div></div>
+      <span class="artist-count">${a.count.toLocaleString()}</span>`;
+    aWrap.appendChild(div);
+  });
+
+  const maxS = allSongs[0].days;
+  const sWrap = document.getElementById('song-bars');
+  allSongs.forEach((s, i) => {
+    const pct = Math.round(s.days / maxS * 100);
+    const color = i === 0 ? '#1DB954' : i < 3 ? '#4A9EE8' : 'rgba(74,158,232,0.3)';
+    const div = document.createElement('div');
+    div.className = 'song-row';
+    div.innerHTML = `
+      <span class="song-rank ${i<3?'top':''}">${i+1}</span>
+      <div class="song-info">
+        <div class="song-name">${s.song}</div>
+        <div class="song-artist">${s.artist}</div>
+      </div>
+      <div class="song-track"><div class="song-fill" data-w="${pct}" style="background:${color};"></div></div>
+      <span class="song-days">${s.days}d</span>`;
+    sWrap.appendChild(div);
+  });
+
+  setTimeout(() => {
+    document.querySelectorAll('.artist-fill, .song-fill').forEach(el => {
+      el.style.width = el.dataset.w + '%';
+    });
+  }, 400);
+}
+
+// ─── CHART DEFAULTS ──────────────────────────────────────
+Chart.defaults.color = '#666';
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 10;
+
+// ─── TREND CHART ─────────────────────────────────────────
+let trendChart;
+function buildTrendChart(labels, pop, exp) {
+  trendChart = new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Avg popularity',
+          data: pop,
+          borderColor: '#4A9EE8',
+          backgroundColor: 'rgba(74,158,232,0.06)',
+          fill: true, tension: 0.4, yAxisID: 'y',
+          pointRadius: 3, pointBackgroundColor: '#4A9EE8',
+          pointBorderColor: '#1a1a1a', pointBorderWidth: 1.5, borderWidth: 2
+        },
+        {
+          label: 'Explicit %',
+          data: exp,
+          borderColor: '#1DB954',
+          borderDash: [5, 4],
+          backgroundColor: 'rgba(29,185,84,0.04)',
+          fill: true, tension: 0.4, yAxisID: 'y2',
+          pointRadius: 3, pointBackgroundColor: '#1DB954',
+          pointBorderColor: '#1a1a1a', pointBorderWidth: 1.5, borderWidth: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 800, easing: 'easeInOutQuart' },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { maxRotation: 45, autoSkip: false, font:{size:9}, color:'#555' },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          border: { color: 'rgba(255,255,255,0.08)' }
+        },
+        y: {
+          min: 83, max: 95,
+          ticks: { color:'#4A9EE8', callback:v=>v.toFixed(0), font:{size:9} },
+          grid: { color:'rgba(255,255,255,0.05)' },
+          border: { color:'rgba(255,255,255,0.08)' },
+          title: { display:true, text:'Popularity', color:'#4A9EE8', font:{size:9} }
+        },
+        y2: {
+          position: 'right', min: 20, max: 60,
+          ticks: { color:'#1DB954', callback:v=>v+'%', font:{size:9} },
+          grid: { display:false },
+          border: { color:'rgba(255,255,255,0.08)' },
+          title: { display:true, text:'Explicit %', color:'#1DB954', font:{size:9} }
+        }
+      }
+    }
+  });
+}
+
+function updateTrendChart() {
+  const { sliceMonths, slicePop, sliceExp } = getFilteredTrend();
+  trendChart.data.labels = sliceMonths;
+  trendChart.data.datasets[0].data = slicePop;
+  trendChart.data.datasets[1].data = sliceExp;
+  trendChart.update();
+}
+
+// ─── POP DIST ─────────────────────────────────────────────
+new Chart(document.getElementById('popDist'), {
+  type: 'bar',
+  data: {
+    labels: ['< 80', '80–84', '85–89', '90–94', '95+'],
+    datasets: [{
+      data: [1749, 2918, 7035, 11546, 4370],
+      backgroundColor: [
+        'rgba(74,158,232,0.12)',
+        'rgba(74,158,232,0.3)',
+        'rgba(74,158,232,0.55)',
+        '#4A9EE8',
+        '#1DB954'
+      ],
+      borderRadius: 5,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    animation: { duration: 1200, easing:'easeOutQuart' },
+    plugins: {
+      legend: { display:false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ' ' + ctx.raw.toLocaleString() + ' chart entries'
+        }
+      }
+    },
+    scales: {
+      x: { ticks:{color:'#555',font:{size:9}}, grid:{display:false}, border:{color:'rgba(255,255,255,0.08)'} },
+      y: {
+        ticks: { color:'#555', font:{size:9}, callback:v=>v>=1000?Math.round(v/1000)+'k':v },
+        grid: { color:'rgba(255,255,255,0.05)' },
+        border: { color:'rgba(255,255,255,0.08)' }
+      }
+    }
+  }
+});
+
+// ─── DONUT — fully interactive ────────────────────────────
+const donutData = {
+  labels: ['Album','Single','Compilation'],
+  values: [17261, 10496, 43],
+  colors: ['#4A9EE8','#1DB954','rgba(74,158,232,0.35)'],
+  pcts: ['62%','38%','0.2%']
+};
+let selectedSlice = 0;
+let donutChart;
+
+function buildDonut(data) {
+  const ctx = document.getElementById('albumPie');
+  donutChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        data: data.values,
+        backgroundColor: data.colors,
+        borderWidth: 2,
+        borderColor: '#242424',
+        hoverOffset: 10,
+        hoverBorderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: false,
+      cutout: '70%',
+      animation: { duration: 1000, easing:'easeInOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: d => {
+              const total = d.dataset.data.reduce((a,b)=>a+b,0);
+              const pct = ((d.raw/total)*100).toFixed(1);
+              return ` ${d.label}: ${d.raw.toLocaleString()} (${pct}%)`;
+            }
+          }
+        }
+      },
+      onClick: (evt, elements) => {
+        if (elements.length > 0) {
+          selectSlice(elements[0].index);
+        }
+      },
+      onHover: (evt, elements) => {
+        evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+        if (elements.length > 0) {
+          updateDonutCenter(elements[0].index, false);
+        } else {
+          updateDonutCenter(selectedSlice, true);
+        }
+      }
+    }
+  });
+}
+
+function selectSlice(idx) {
+  selectedSlice = idx;
+  // reset active state in legend
+  document.querySelectorAll('.donut-legend-item').forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+  });
+  updateDonutCenter(idx, true);
+  // highlight slice
+  donutChart.setDatasetVisibility(0, true);
+}
+
+function updateDonutCenter(idx, persist) {
+  const total = donutData.values.reduce((a,b)=>a+b,0);
+  const pct   = ((donutData.values[idx]/total)*100).toFixed(1);
+  const label = donutData.labels[idx];
+  document.getElementById('donutVal').textContent   = pct + '%';
+  document.getElementById('donutLabel').textContent = label;
+  document.getElementById('donutVal').style.color   = donutData.colors[idx];
+}
+
+function updateDonutForTypes() {
+  const typeMap = { 'album':0, 'single':1, 'compilation':2 };
+  const newValues = donutData.values.map((v,i) => {
+    const type = donutData.labels[i].toLowerCase();
+    return state.types.has(type) ? v : 0;
+  });
+  donutChart.data.datasets[0].data = newValues;
+  donutChart.update();
+
+  // Update legend pcts
+  const total = newValues.reduce((a,b)=>a+b,0);
+  document.querySelectorAll('.donut-legend-item').forEach((el, i) => {
+    const pct = total > 0 ? ((newValues[i]/total)*100).toFixed(1) : '0.0';
+    el.querySelector('.donut-legend-pct').textContent = pct + '%';
+  });
+}
+
+// ─── INIT ────────────────────────────────────────────────
+buildBars();
+buildTrendChart(months, avgPop, expPct);
+buildDonut(donutData);
+selectSlice(0);
+
+// KPI initial count-up
+document.querySelectorAll('[data-count]').forEach(el => {
+  const target = parseFloat(el.dataset.count);
+  const dec    = parseInt(el.dataset.decimal || 0);
+  const dur    = 1200;
+  const start  = performance.now();
+  function step(now) {
+    const t = Math.min((now-start)/dur,1);
+    const ease = 1 - Math.pow(1-t,3);
+    el.textContent = (target*ease).toFixed(dec);
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = target.toFixed(dec);
+  }
+  setTimeout(()=>requestAnimationFrame(step), 300);
+});
+</script>
+</body>
+</html>
