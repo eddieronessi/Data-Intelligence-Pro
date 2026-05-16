@@ -10,6 +10,7 @@ from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.utils
+import plotly.io as pio
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, GradientBoostingClassifier, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression, LogisticRegression
@@ -19,7 +20,7 @@ from sklearn.cluster import KMeans
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image as RLImage
 from reportlab.lib import colors
 import traceback
 import gc 
@@ -78,7 +79,7 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Shared Groq Configuration for existing Chatbots
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "YOUR_API_KEY_HERE")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 def get_groq_llm():
     return ChatGroq(model="llama-3.3-70b-versatile", temperature=0.1, api_key=GROQ_API_KEY)
 
@@ -97,6 +98,7 @@ class EnhancedDataIntelligenceEngine:
         self.latest_eda_report = None
         self.latest_advanced_report = None
         self.latest_ml_report = None
+        self.saved_figures = {}
 
     def check_memory_usage(self):
         memory_percent = psutil.virtual_memory().percent
@@ -282,14 +284,9 @@ class EnhancedDataIntelligenceEngine:
             print(f"Multi-dataset loading error: {e}")
             return {"error": f"Error loading dataset {dataset_id}: {str(e)}"}
 
-    def connect_sql(self, db_type, host=None, user=None, password=None, database=None, query=None, port=None, sqlite_path=None):
+    def connect_sql(self, db_type, host=None, user=None, password=None, database=None, query=None, port=None):
         try:
-            if db_type == "sqlite":
-                if not sqlite_path:
-                    raise ValueError("SQLite path is required for sqlite database type.")
-                engine = create_engine(f"sqlite:///{sqlite_path}")
-
-            elif db_type == "mysql":
+            if db_type == "mysql":
                 port = port or 3306
                 host = host or 'localhost'
                 user = user or 'root'
@@ -333,13 +330,8 @@ class EnhancedDataIntelligenceEngine:
                 if db_engine is None:
                     raise Exception("All MySQL connection attempts failed.")
 
-            elif db_type == "postgresql":
-                port = port or 5432
-                if not all([host, user, password, database]):
-                    raise ValueError("Host, user, password, and database are required for PostgreSQL")
-                db_engine = create_engine(f"postgresql://{user}:{password}@{host}:{port}/{database}")
             else:
-                raise ValueError(f"Unsupported database type: {db_type}")
+                raise ValueError(f"Unsupported database type: {db_type}. Only MySQL is supported.")
 
             try:
                 query_upper = query.upper().strip()
@@ -381,13 +373,9 @@ class EnhancedDataIntelligenceEngine:
             traceback.print_exc()
             return {"error": f"Error connecting to database: {str(e)}"}
 
-    def test_sql_connection(self, db_type, host=None, user=None, password=None, database=None, port=None, sqlite_path=None):
+    def test_sql_connection(self, db_type, host=None, user=None, password=None, database=None, port=None):
         try:
-            if db_type == "sqlite":
-                if not sqlite_path:
-                    raise ValueError("SQLite path is required")
-                db_engine = create_engine(f"sqlite:///{sqlite_path}")
-            elif db_type == "mysql":
+            if db_type == "mysql":
                 port = port or 3306
                 host = host or 'localhost'
                 user = user or 'root'
@@ -396,13 +384,8 @@ class EnhancedDataIntelligenceEngine:
                     raise ValueError("Database name is required for MySQL")
                 connection_string = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
                 db_engine = create_engine(connection_string, connect_args={"connect_timeout": 10})
-            elif db_type == "postgresql":
-                port = port or 5432
-                if not all([host, user, password, database]):
-                    raise ValueError("Host, user, password, and database are required for PostgreSQL")
-                db_engine = create_engine(f"postgresql://{user}:{password}@{host}:{port}/{database}")
             else:
-                raise ValueError(f"Unsupported database type: {db_type}")
+                raise ValueError(f"Unsupported database type: {db_type}. Only MySQL is supported.")
 
             with db_engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
@@ -520,7 +503,7 @@ class EnhancedDataIntelligenceEngine:
                 from langchain_groq import ChatGroq
                 import re
                 
-                PREDEFINED_VIZ_API_KEY = os.environ.get("PREDEFINED_VIZ_API_KEY", "YOUR_API_KEY_HERE")
+                PREDEFINED_VIZ_API_KEY = os.environ.get("PREDEFINED_VIZ_API_KEY")
                 viz_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.1, api_key=PREDEFINED_VIZ_API_KEY)
                 
                 schema_info = df.dtypes.astype(str).to_dict()
@@ -1137,6 +1120,12 @@ def upload_file():
 
         session['uploaded_filename'] = filename
         session['data_path'] = filepath
+        
+        # --- FIX ADDED HERE ---
+        # Clear any lingering SQL session data so that file-based dashboards render correctly.
+        session.pop('sql_connection', None)
+        session.pop('sql_query', None)
+        # ----------------------
 
         if filename.lower().endswith('.csv'):
             result = engine.load_csv(filepath)
@@ -1184,8 +1173,7 @@ def test_connection():
             user=data.get('user', 'root'),
             password=data.get('password', 'Uzumymw*1'),
             database=data.get('database'),
-            port=data.get('port'),
-            sqlite_path=data.get('sqlite_path')
+            port=data.get('port')
         )
         return jsonify(result)
     except Exception as e:
@@ -1202,17 +1190,21 @@ def sql_connect():
         password = data.get('password', 'Uzumymw*1')
         database = data.get('database')
         query = data.get('query')
-        sqlite_path = data.get('sqlite_path')
         
         if not query: return jsonify({'error': 'Query is required'}), 400
-        if db_type == 'sqlite' and not sqlite_path: return jsonify({'error': 'SQLite path is required'}), 400
-        if db_type in ['mysql', 'postgresql'] and not database: return jsonify({'error': 'Database name is required'}), 400
+        if not database: return jsonify({'error': 'Database name is required'}), 400
         
-        result = engine.connect_sql(db_type=db_type, host=host, user=user, password=password, database=database, query=query, port=port, sqlite_path=sqlite_path)
+        result = engine.connect_sql(db_type=db_type, host=host, user=user, password=password, database=database, query=query, port=port)
         
         if 'error' not in result:
             session['sql_connection'] = {'db_type': db_type, 'host': host, 'user': user, 'database': database, 'port': port}
             session['sql_query'] = query
+            
+            # --- FIX ADDED HERE ---
+            # Clear any lingering File session data when a SQL connection is established.
+            session.pop('uploaded_filename', None)
+            session.pop('data_path', None)
+            # ----------------------
         
         return jsonify(result)
     except Exception as e:
@@ -1322,6 +1314,94 @@ def export_jupyter():
             "nbformat": 4,
             "nbformat_minor": 5
         }
+        
+        if engine.latest_eda_report:
+            notebook["cells"].append({
+                "cell_type": "markdown", 
+                "metadata": {}, 
+                "source": ["## 2. Exploratory Data Analysis Report\n\n", f"{engine.latest_eda_report}\n"]
+            })
+            
+        cleaning_code = [
+            "# 3. Automated Data Cleaning\n",
+            "num_cols = df.select_dtypes(include=[np.number]).columns\n",
+            "if not num_cols.empty:\n",
+            "    df[num_cols] = df[num_cols].fillna(df[num_cols].median())\n",
+            "cat_cols = df.select_dtypes(exclude=[np.number]).columns\n",
+            "for col in cat_cols:\n",
+            "    if not df[col].mode().empty:\n",
+            "        df[col] = df[col].fillna(df[col].mode()[0])\n",
+            "for col in num_cols:\n",
+            "    Q1 = df[col].quantile(0.25)\n",
+            "    Q3 = df[col].quantile(0.75)\n",
+            "    IQR = Q3 - Q1\n",
+            "    df[col] = np.clip(df[col], Q1 - 1.5*IQR, Q3 + 1.5*IQR)\n",
+            "df.head()\n"
+        ]
+        notebook["cells"].append({
+            "cell_type": "code", 
+            "metadata": {}, 
+            "execution_count": 3, 
+            "outputs": [], 
+            "source": cleaning_code
+        })
+        
+        if engine.latest_advanced_report:
+            notebook["cells"].append({
+                "cell_type": "markdown", 
+                "metadata": {}, 
+                "source": ["## 4. Advanced Analysis Report\n\n", f"{engine.latest_advanced_report}\n"]
+            })
+            
+        if engine.current_features:
+            features_list = engine.current_features
+            ml_code = [
+                "# 5. Machine Learning Setup\n",
+                f"features = {features_list}\n",
+                "# NOTE: Replace 'TARGET_COLUMN' with your actual target variable\n",
+                "X = df[features] if set(features).issubset(df.columns) else df.iloc[:, :-1]\n",
+                "y = df.iloc[:, -1] # Update this to your target!\n",
+                "X = X.select_dtypes(include=[np.number]).fillna(0)\n",
+                "X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\n",
+                "model = RandomForestClassifier(random_state=42)\n",
+                "model.fit(X_train, y_train)\n"
+            ]
+            notebook["cells"].append({"cell_type": "code", "metadata": {}, "execution_count": 4, "outputs": [], "source": ml_code})
+            
+            shap_code = [
+                "# 6. Model Interpretability with SHAP\n",
+                "explainer = shap.TreeExplainer(model)\n",
+                "shap_values = explainer.shap_values(X_test)\n",
+                "shap.summary_plot(shap_values, X_test)\n"
+            ]
+            notebook["cells"].append({"cell_type": "code", "metadata": {}, "execution_count": 5, "outputs": [], "source": shap_code})
+            
+        if engine.latest_ml_report:
+            notebook["cells"].append({
+                "cell_type": "markdown", 
+                "metadata": {}, 
+                "source": ["## 7. Machine Learning Evaluation & AI Report\n\n", f"{engine.latest_ml_report}\n"]
+            })
+            notebook["cells"].append({
+                "cell_type": "code", 
+                "metadata": {}, 
+                "execution_count": 6, 
+                "outputs": [], 
+                "source": [
+                    "import matplotlib.pyplot as plt\n",
+                    "import numpy as np\n",
+                    "if hasattr(model, 'feature_importances_'):\n",
+                    "    importances = model.feature_importances_\n",
+                    "    indices = np.argsort(importances)[::-1]\n",
+                    "    plt.figure(figsize=(10, 6))\n",
+                    "    plt.title('Feature Importances')\n",
+                    "    plt.bar(range(X.shape[1]), importances[indices], align='center')\n",
+                    "    plt.xticks(range(X.shape[1]), [features[i] for i in indices], rotation=90)\n",
+                    "    plt.tight_layout()\n",
+                    "    plt.show()\n"
+                ]
+            })
+
         return send_file(
             io.BytesIO(json.dumps(notebook).encode()), 
             as_attachment=True, 
@@ -1340,7 +1420,7 @@ def analyze():
         results = engine.perform_eda()
         
         try:
-            EXPLORATORY_GROQ_API_KEY = os.environ.get("EXPLORATORY_GROQ_API_KEY", "YOUR_API_KEY_HERE")
+            EXPLORATORY_GROQ_API_KEY = os.environ.get("EXPLORATORY_GROQ_API_KEY")
             report_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2, api_key=EXPLORATORY_GROQ_API_KEY)
             
             stats_summary = {
@@ -1430,13 +1510,20 @@ def predefined_visualizations():
                 "redirect_url": "/ncr-dashboard"
             })
 
+        # --- Market Dataset Detection ---
+        market_indicators = {'symbol', 'type', 'close', 'high', 'low', 'volume'}
+        if '2019 - 2024 market data' in filename or 'market' in filename or market_indicators.issubset(cols):
+            return jsonify({
+                "is_market_special": True, 
+                "redirect_url": "/market-dashboard"
+            })
+
         # Standard behavior for all other datasets
         results = engine.generate_predefined_visualizations()
         return jsonify(make_json_serializable(results))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# --- NEW: Multi-Dataset Advanced Visualizations Route ---
 @app.route('/multi-advanced-visualizations', methods=['POST'])
 def multi_advanced_visualizations():
     try:
@@ -1467,7 +1554,6 @@ def multi_advanced_visualizations():
         return jsonify({'error': 'Advanced Visualizations are currently only configured for specific cross-dataset combinations (like IPL Batters & Bowlers).'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-# --- END NEW ---
 
 @app.route('/anomaly-dashboard')
 def anomaly_dashboard():
@@ -1492,6 +1578,10 @@ def ncr_dashboard():
 @app.route('/ipl-dashboard')
 def ipl_dashboard():
     return render_template('ipl_2025_dashboard.html')
+
+@app.route('/market-dashboard')
+def market_dashboard():
+    return render_template('market_data_dashboard_2019_2024.html')
 
 @app.route('/chat-to-data', methods=['POST'])
 def chat_to_data():
@@ -1559,7 +1649,7 @@ def chat_to_data():
         raw_str = str(raw_response).strip()
         
         if raw_str.startswith("```"):
-            raw_str = re.sub(r'^```(json)?|```$', '', raw_str, flags=re.MULTILINE).strip()
+             raw_str = re.sub(r'^```(json)?| ```$', '', raw_str, flags=re.MULTILINE).strip()
             
         try:
             response_data = json.loads(raw_str)
@@ -1593,6 +1683,7 @@ def chat_to_data():
             ))
             fig.update_layout(title="Correlation Heatmap")
             fig = apply_pro_layout(fig) 
+            engine.saved_figures[response_data.get('chart_name', 'Correlation Heatmap')] = fig
             
             return jsonify({
                 "type": "plot",
@@ -1701,7 +1792,7 @@ def advanced_analysis():
         }
         
         try:
-            ADVANCED_GROQ_API_KEY = os.environ.get("ADVANCED_GROQ_API_KEY", "YOUR_API_KEY_HERE")
+            ADVANCED_GROQ_API_KEY = os.environ.get("ADVANCED_GROQ_API_KEY")
             advanced_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2, api_key=ADVANCED_GROQ_API_KEY)
             
             stats_summary = {
@@ -1786,7 +1877,7 @@ def predict():
         
         if 'error' not in results:
             try:
-                ML_INTERPRETATION_GROQ_API_KEY = os.environ.get("ML_INTERPRETATION_GROQ_API_KEY", "YOUR_API_KEY_HERE")
+                ML_INTERPRETATION_GROQ_API_KEY = os.environ.get("ML_INTERPRETATION_GROQ_API_KEY")
                 ml_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2, api_key=ML_INTERPRETATION_GROQ_API_KEY)
                 
                 prompt = f"""
@@ -1841,33 +1932,52 @@ def export_enhanced_report():
             return jsonify({'error': 'No data uploaded yet. Please upload a file first.'}), 400
         
         pdf_buffer = io.BytesIO()
-        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4)
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=18)
         styles = getSampleStyleSheet()
         
-        title_style = ParagraphStyle('EnhancedTitle', parent=styles['Heading1'], fontSize=24, spaceAfter=20, alignment=1, textColor=colors.HexColor('#2563eb'))
+        title_style = ParagraphStyle('EnhancedTitle', parent=styles['Heading1'], fontSize=28, spaceAfter=20, alignment=1, textColor=colors.HexColor('#1e3a8a'), fontName='Helvetica-Bold')
+        subtitle_style = ParagraphStyle('SubTitle', parent=styles['Normal'], fontSize=14, spaceAfter=30, alignment=1, textColor=colors.HexColor('#6b7280'))
+        section_style = ParagraphStyle('SectionHeader', parent=styles['Heading2'], fontSize=18, spaceBefore=20, spaceAfter=10, textColor=colors.HexColor('#111827'), fontName='Helvetica-Bold')
+        normal_style = styles['Normal']
         
         story = []
         
         raw_filename = session.get('uploaded_filename', 'Data_Intelligence_Dataset')
         dataset_name = os.path.splitext(raw_filename)[0].replace('_', ' ').title()
-        report_title = f"{dataset_name} Report"
         
-        story.append(Paragraph(report_title, title_style))
-        story.append(Spacer(1, 10))
-        story.append(Paragraph(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 2*inch))
+        story.append(Paragraph("Data Intelligence Pro", title_style))
+        story.append(Paragraph(f"Comprehensive Analytical Report: {dataset_name}", title_style))
+        story.append(Paragraph(f"Generated on: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", subtitle_style))
+        story.append(PageBreak())
         
-        story.append(Paragraph("Data Overview", styles['Heading2']))
+        story.append(Paragraph("1. Dataset Overview", section_style))
         data_summary = engine.get_data_summary()
         memory_usage = engine.data.memory_usage(deep=True).sum() / 1024**2
         
-        executive_summary = f"""
-        This report presents a comprehensive analysis of the uploaded dataset containing {data_summary['shape'][0]:,} records 
-        and {data_summary['shape'][1]} features. The dataset occupies approximately {memory_usage:.1f}MB in memory.
-        The analysis includes {len(data_summary['numeric_columns'])} numeric variables 
-        and {len(data_summary['categorical_columns'])} categorical variables.
-        """
-        story.append(Paragraph(executive_summary, styles['Normal']))
+        summary_data = [
+            ['Metric', 'Value'],
+            ['Total Records (Rows)', f"{data_summary['shape'][0]:,}"],
+            ['Total Features (Columns)', str(data_summary['shape'][1])],
+            ['Numeric Features', str(len(data_summary['numeric_columns']))],
+            ['Categorical Features', str(len(data_summary['categorical_columns']))],
+            ['Total Missing Values', f"{data_summary.get('total_missing', 0):,}"],
+            ['Estimated Memory Usage', f"{memory_usage:.2f} MB"]
+        ]
+        
+        t = Table(summary_data, colWidths=[3*inch, 3*inch])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2563eb')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f3f4f6')),
+            ('GRID', (0, 0), (-1, -1), 1, colors.white),
+            ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+        ]))
+        story.append(t)
         story.append(Spacer(1, 20))
         
         def append_md(md_text):
@@ -1885,28 +1995,46 @@ def export_enhanced_report():
                 if line.startswith('### '):
                     story.append(Paragraph(line[4:], styles['Heading3']))
                 elif line.startswith('## '):
-                    story.append(Paragraph(line[3:], styles['Heading2']))
+                    story.append(Paragraph(line[3:], section_style))
                 elif line.startswith('# '):
-                    story.append(Paragraph(line[2:], styles['Heading1']))
+                    story.append(Paragraph(line[2:], section_style))
                 elif line.startswith('- ') or line.startswith('* '):
-                    story.append(Paragraph(line[2:], styles['Normal'], bulletText='•'))
+                    story.append(Paragraph(line[2:], normal_style, bulletText='•'))
                 else:
-                    story.append(Paragraph(line, styles['Normal']))
+                    story.append(Paragraph(line, normal_style))
         
         if engine.latest_eda_report:
             story.append(PageBreak())
-            story.append(Paragraph("Exploratory Data Analysis", styles['Heading1']))
+            story.append(Paragraph("2. Exploratory Data Analysis", section_style))
             append_md(engine.latest_eda_report)
             
         if engine.latest_advanced_report:
             story.append(PageBreak())
-            story.append(Paragraph("Advanced Deep-Dive Diagnostics", styles['Heading1']))
+            story.append(Paragraph("3. Advanced Deep-Dive Diagnostics", section_style))
             append_md(engine.latest_advanced_report)
             
         if engine.latest_ml_report:
             story.append(PageBreak())
-            story.append(Paragraph("Machine Learning Evaluation", styles['Heading1']))
+            story.append(Paragraph("4. Machine Learning Evaluation", section_style))
             append_md(engine.latest_ml_report)
+
+        if hasattr(engine, 'saved_figures') and engine.saved_figures:
+            story.append(PageBreak())
+            story.append(Paragraph("5. Visualizations & Generated Charts", section_style))
+            story.append(Paragraph("The following charts were generated dynamically during your analysis session.", normal_style))
+            story.append(Spacer(1, 15))
+
+            for title, fig in engine.saved_figures.items():
+                try:
+                    img_bytes = pio.to_image(fig, format='png', width=700, height=450)
+                    img_stream = io.BytesIO(img_bytes)
+                    story.append(Paragraph(title, styles['Heading3']))
+                    story.append(Spacer(1, 10))
+                    story.append(RLImage(img_stream, width=6.5*inch, height=4*inch))
+                    story.append(Spacer(1, 20))
+                except Exception as e:
+                    print(f"Skipping chart rendering for {title} in PDF due to missing libraries or issues: {str(e)}")
+                    pass
         
         doc.build(story)
         pdf_buffer.seek(0)
