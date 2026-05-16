@@ -17,7 +17,7 @@
     
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
-        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
+        import { getAuth, onAuthStateChanged, signOut, setPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
         
         const firebaseConfig = {
             apiKey: "AIzaSyBbFkYnhoOZITSx-wLaaZnDGcF4lBg87-c",
@@ -31,6 +31,11 @@
         
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        
+        // Enforce session persistence so the user logs out automatically when the app/tab is closed
+        setPersistence(auth, browserSessionPersistence).catch((error) => {
+            console.error("Error setting auth persistence:", error);
+        });
         
         window.firebaseAuth = auth;
         window.firebaseAuthMethods = {
@@ -48,7 +53,15 @@
         
         function updateUserProfile(user) {
             const displayName = user.displayName || 'User';
-            const email = user.email || 'user@example.com';
+            
+            let userEmail = user.email;
+            if (!userEmail && user.providerData && user.providerData.length > 0) {
+                const providerWithEmail = user.providerData.find(p => p.email);
+                if (providerWithEmail) {
+                    userEmail = providerWithEmail.email;
+                }
+            }
+            const email = userEmail || 'user@example.com';
             
             if (document.getElementById('userName')) document.getElementById('userName').textContent = displayName;
             if (document.getElementById('userEmail')) document.getElementById('userEmail').textContent = email;
@@ -57,7 +70,7 @@
             if (document.getElementById('userInitials')) document.getElementById('userInitials').textContent = initials;
             if (document.getElementById('dropdownInitials')) document.getElementById('dropdownInitials').textContent = initials;
             
-            localStorage.setItem('userData', JSON.stringify({ uid: user.uid, email: user.email, displayName: user.displayName, photoURL: user.photoURL }));
+            sessionStorage.setItem('userData', JSON.stringify({ uid: user.uid, email: email, displayName: displayName, photoURL: user.photoURL }));
         }
     </script>
     
@@ -217,8 +230,6 @@
                     <div>
                         <select id="dbType" class="w-full px-4 py-3 border rounded-lg mb-4">
                             <option value="mysql">MySQL</option>
-                            <option value="sqlite">SQLite</option>
-                            <option value="postgresql">PostgreSQL</option>
                         </select>
                         <input type="text" id="dbHost" value="localhost" class="w-full px-4 py-3 border rounded-lg mb-4">
                         <input type="text" id="dbPort" value="3306" class="w-full px-4 py-3 border rounded-lg mb-4">
@@ -333,7 +344,7 @@
                     <button onclick="showDataIntelChatInterface()" class="bg-black border border-gray-600 text-white px-6 py-4 rounded-xl hover:bg-gray-800 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-comments mr-2"></i>Data Intelligence Chat Bot</button>
                     <button onclick="showMLSection()" class="bg-purple-600 text-white px-6 py-4 rounded-xl hover:bg-purple-700 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-robot mr-2"></i>Build ML Model</button>
                     <button onclick="exportReport()" class="bg-gray-700 text-white px-6 py-4 rounded-xl hover:bg-gray-800 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-file-pdf mr-2"></i>Export Report</button>
-                    <button onclick="exportJupyter()" class="hidden bg-yellow-600 text-white px-6 py-4 rounded-xl hover:bg-yellow-700 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-book mr-2"></i>Export Notebook</button>
+                    <button onclick="exportJupyter()" class="bg-yellow-600 text-white px-6 py-4 rounded-xl hover:bg-yellow-700 font-semibold shadow-lg flex items-center justify-center"><i class="fas fa-book mr-2"></i>Export Notebook</button>
                     
                 </div>
             </div>
@@ -566,7 +577,7 @@
         axios.defaults.maxBodyLength = 1073741824;
 
         function initializeUserProfile() {
-            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
             if (userData.displayName || userData.email) {
                 document.getElementById('userName').textContent = userData.displayName || 'User';
                 document.getElementById('userEmail').textContent = userData.email || 'user@example.com';
@@ -590,7 +601,7 @@
             } catch (error) {
                 console.error("Firebase sign out error", error);
             }
-            localStorage.removeItem('userData'); 
+            sessionStorage.removeItem('userData'); 
             sessionStorage.clear();
             window.location.href = '/';
         }
@@ -689,7 +700,7 @@
             const database = document.getElementById('dbName').value;
             const query = document.getElementById('sqlQuery').value;
 
-            if (!database && dbType !== 'sqlite') { alert('Database name is required'); return; }
+            if (!database) { alert('Database name is required'); return; }
             if (!query) { alert('Query is required'); return; }
 
             showLoading(true);
@@ -1453,6 +1464,32 @@
                             </h2>
                             <div class="flex items-center">
                                 <button onclick="downloadDashboardHtml('${res.data.redirect_url}', 'ncr_ride_bookings_dashboard.html')" class="text-gray-500 hover:text-black focus:outline-none mr-4" title="Download HTML">
+                                    <i class="fas fa-download text-xl"></i>
+                                </button>
+                                <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
+                                    <i class="fas fa-expand text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="w-full" style="height: 850px;">
+                            <iframe src="${res.data.redirect_url}" class="w-full h-full border border-gray-200 rounded-xl shadow-inner"></iframe>
+                        </div>
+                    `;
+                    vizContainer.classList.remove('hidden');
+                    vizContainer.scrollIntoView({ behavior: 'smooth' });
+                    showLoading(false);
+                    return;
+                }
+                
+                // --- Market Data Special Handling ---
+                if (res.data.is_market_special) {
+                    vizContainer.innerHTML = `
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold flex items-center text-gray-800">
+                                <i class="fas fa-chart-area mr-3 text-blue-600"></i> Market Data Advanced Dashboard
+                            </h2>
+                            <div class="flex items-center">
+                                <button onclick="downloadDashboardHtml('${res.data.redirect_url}', 'market_data_dashboard_2019_2024.html')" class="text-gray-500 hover:text-black focus:outline-none mr-4" title="Download HTML">
                                     <i class="fas fa-download text-xl"></i>
                                 </button>
                                 <button onclick="toggleFullScreenDashboard(this)" class="fullscreen-btn text-gray-500 hover:text-black focus:outline-none" title="Full Screen">
